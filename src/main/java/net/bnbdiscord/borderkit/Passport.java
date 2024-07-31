@@ -98,11 +98,11 @@ public class Passport {
 
         var issueDate = ZonedDateTime.now(ZoneOffset.UTC);
         var expiryDate = LocalDate.parse(state.fieldValue("expiry"), inputFormatter).atStartOfDay(ZoneOffset.UTC);
-        var issueDateString = issueDate.format(formatter);
-        var expiryDateString = expiryDate.format(formatter);
+        var issueDateString = issueDate.format(formatter).toUpperCase();
+        var expiryDateString = expiryDate.format(formatter).toUpperCase();
 
         var dateOfBirth = LocalDate.parse(state.fieldValue("dateOfBirth"), inputFormatter).atStartOfDay(ZoneOffset.UTC);
-        var dateOfBirthString = dateOfBirth.format(formatter);
+        var dateOfBirthString = dateOfBirth.format(formatter).toUpperCase();
 
         var issuingCountryCode = state.getJurisdiction();
         var issuingCountryName = "TAY";
