@@ -10,6 +10,8 @@ import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -18,15 +20,23 @@ import java.util.Random;
 
 public class Passport {
     private final BookMeta meta;
+    private final NamespacedKey passportKey;
     private final NamespacedKey holderGivenNameKey;
     private final NamespacedKey holderFamilyNameKey;
     private final NamespacedKey passportNumberKey;
+    private final NamespacedKey dateOfBirthKey;
+    private final NamespacedKey expiryKey;
+    private final NamespacedKey authorityKey;
 
     public Passport(Plugin plugin, ItemStack book) {
         this.meta = (BookMeta) book.getItemMeta();
+        this.passportKey = new NamespacedKey(plugin, "passport");
         this.holderGivenNameKey = new NamespacedKey(plugin, "passportHolderGiven");
         this.holderFamilyNameKey = new NamespacedKey(plugin, "passportHolderFamily");
         this.passportNumberKey = new NamespacedKey(plugin, "passportNumber");
+        this.expiryKey = new NamespacedKey(plugin, "expiry");
+        this.authorityKey = new NamespacedKey(plugin, "authority");
+        this.dateOfBirthKey = new NamespacedKey(plugin, "dateOfBirth");
     }
 
     private static String replaceFromIndex(String str1, int index, String str2) {
@@ -78,17 +88,24 @@ public class Passport {
         var random = new Random();
         var passportNumber = ((char) (random.nextInt(26) + 'A')) + "" + ((char) (random.nextInt(26) + 'A')) + String.format("%06d", random.nextInt(1000000));
 
-        var issueDate = ZonedDateTime.now(ZoneOffset.UTC);
-        var expiryDate = issueDate.plusYears(10);
         var formatter = DateTimeFormatter.ofPattern("dd MMM yyyy").withLocale(Locale.ENGLISH);
         var mrzFormatter = DateTimeFormatter.ofPattern("yyMMdd").withLocale(Locale.ENGLISH);
-        var issueDateString = issueDate.format(formatter);
+        var inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
         var givenNames = state.fieldValue("givenNames");
         var familyNames = state.fieldValue("familyNames");
         var placeOfBirth = state.fieldValue("placeOfBirth");
 
-        var issuingCountryCode = "TAY";
+        var issueDate = ZonedDateTime.now(ZoneOffset.UTC);
+        var expiryDate = LocalDate.parse(state.fieldValue("expiry"), inputFormatter).atStartOfDay(ZoneOffset.UTC);
+        var issueDateString = issueDate.format(formatter);
+        var expiryDateString = expiryDate.format(formatter);
+
+        var dateOfBirth = LocalDate.parse(state.fieldValue("dateOfBirth"), inputFormatter).atStartOfDay(ZoneOffset.UTC);
+        var dateOfBirthString = dateOfBirth.format(formatter);
+
+        var issuingCountryCode = state.getJurisdiction();
+        var issuingCountryName = "TAY";
 
         var mrz1 = "P<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
         var mrz2 = "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
@@ -124,26 +141,26 @@ public class Passport {
                 .append(Component.text("PLACE OF BIRTH").color(TextColor.color(100, 100, 255))).appendNewline()
                 .append(Component.text(placeOfBirth).hoverEvent(HoverEvent.showText(Component.text(placeOfBirth)))).appendNewline()
                 .appendNewline()
-                .append(Component.text("DATE OF ISSUE").color(TextColor.color(100, 100, 255))).appendNewline()
-                .append(Component.text(issueDateString).hoverEvent(HoverEvent.showText(Component.text(issueDateString)))).appendNewline()
+                .append(Component.text("DATE OF BIRTH").color(TextColor.color(100, 100, 255))).appendNewline()
+                .append(Component.text(dateOfBirthString).hoverEvent(HoverEvent.showText(Component.text(dateOfBirthString)))).appendNewline()
                 .appendNewline()
-                .append(Component.text("PLACE OF BIRTH").color(TextColor.color(100, 100, 255))).appendNewline()
-                .append(Component.text(placeOfBirth).hoverEvent(HoverEvent.showText(Component.text(placeOfBirth)))).appendNewline()
-                .appendNewline()
+                .append(Component.text("AUTHORITY / CODE").color(TextColor.color(100, 100, 255))).appendNewline()
+                .append(Component.text(issuingCountryName).hoverEvent(HoverEvent.showText(Component.text(issuingCountryName)))).appendNewline()
+                .append(Component.text(issuingCountryCode).hoverEvent(HoverEvent.showText(Component.text(issuingCountryCode)))).appendNewline()
                 .appendNewline()
                 .appendNewline()
                 .append(Component.text(mrz1.substring(14, 28))).appendNewline()
                 .append(Component.text(mrz2.substring(14, 28))).appendNewline()
                 .build());
         meta.page(4, Component.text()
-                .append(Component.text("PLACE OF BIRTH").color(TextColor.color(100, 100, 255))).appendNewline()
-                .append(Component.text(placeOfBirth).hoverEvent(HoverEvent.showText(Component.text(placeOfBirth)))).appendNewline()
-                .appendNewline()
                 .append(Component.text("DATE OF ISSUE").color(TextColor.color(100, 100, 255))).appendNewline()
                 .append(Component.text(issueDateString).hoverEvent(HoverEvent.showText(Component.text(issueDateString)))).appendNewline()
                 .appendNewline()
-                .append(Component.text("PLACE OF BIRTH").color(TextColor.color(100, 100, 255))).appendNewline()
-                .append(Component.text(placeOfBirth).hoverEvent(HoverEvent.showText(Component.text(placeOfBirth)))).appendNewline()
+                .append(Component.text("DATE OF EXPIRY").color(TextColor.color(100, 100, 255))).appendNewline()
+                .append(Component.text(expiryDateString).hoverEvent(HoverEvent.showText(Component.text(expiryDateString)))).appendNewline()
+                .appendNewline()
+                .appendNewline()
+                .appendNewline()
                 .appendNewline()
                 .appendNewline()
                 .appendNewline()
@@ -151,16 +168,48 @@ public class Passport {
                 .append(Component.text(mrz2.substring(28, 44))).appendNewline()
                 .build());
 
+        meta.getPersistentDataContainer().set(passportKey, PersistentDataType.BOOLEAN, true);
         meta.getPersistentDataContainer().set(passportNumberKey, PersistentDataType.STRING, passportNumber);
         meta.getPersistentDataContainer().set(holderGivenNameKey, PersistentDataType.STRING, givenNames);
         meta.getPersistentDataContainer().set(holderFamilyNameKey, PersistentDataType.STRING, familyNames);
+        meta.getPersistentDataContainer().set(authorityKey, PersistentDataType.STRING, issuingCountryCode);
+        meta.getPersistentDataContainer().set(expiryKey, PersistentDataType.LONG, expiryDate.toEpochSecond());
+        meta.getPersistentDataContainer().set(dateOfBirthKey, PersistentDataType.LONG, dateOfBirth.toEpochSecond());
 
         var newBook = new ItemStack(Material.WRITTEN_BOOK);
         newBook.setItemMeta(meta);
         return newBook;
     }
 
-    public String holder() {
+    public boolean isValidPassport() {
+        return Boolean.TRUE.equals(meta.getPersistentDataContainer().get(passportKey, PersistentDataType.BOOLEAN));
+    }
+
+    public String getPassportNumber() {
+        return meta.getPersistentDataContainer().get(passportNumberKey, PersistentDataType.STRING);
+    }
+
+    public String getGivenName() {
         return meta.getPersistentDataContainer().get(holderGivenNameKey, PersistentDataType.STRING);
+    }
+
+    public String getFamilyName() {
+        return meta.getPersistentDataContainer().get(holderFamilyNameKey, PersistentDataType.STRING);
+    }
+
+    public String getIssuingAuthority() {
+        return meta.getPersistentDataContainer().get(authorityKey, PersistentDataType.STRING);
+    }
+
+    public ZonedDateTime getExpiryDate() {
+        return ZonedDateTime.ofInstant(Instant.ofEpochSecond(meta.getPersistentDataContainer().get(expiryKey, PersistentDataType.LONG)), ZoneOffset.UTC);
+    }
+
+    public ZonedDateTime getDateOfBirth() {
+        return ZonedDateTime.ofInstant(Instant.ofEpochSecond(meta.getPersistentDataContainer().get(dateOfBirthKey, PersistentDataType.LONG)), ZoneOffset.UTC);
+    }
+
+    public boolean isExpired() {
+        return getExpiryDate().isBefore(ZonedDateTime.now());
     }
 }

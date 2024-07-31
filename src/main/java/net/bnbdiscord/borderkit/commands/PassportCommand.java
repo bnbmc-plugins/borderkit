@@ -3,6 +3,9 @@ package net.bnbdiscord.borderkit.commands;
 import de.rapha149.signgui.SignGUI;
 import net.bnbdiscord.borderkit.Passport;
 import net.bnbdiscord.borderkit.PassportSigningState;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
@@ -12,10 +15,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collections;
-import java.util.Dictionary;
-import java.util.Hashtable;
-import java.util.UUID;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 public class PassportCommand implements CommandExecutor {
     private final Plugin plugin;
@@ -38,11 +39,84 @@ public class PassportCommand implements CommandExecutor {
         return switch (strings[0]) {
             case "sign" -> signPassport(commandSender, strings);
             case "signContinue" -> signContinue(commandSender, strings);
+            case "nextPage" -> nextPage(commandSender, strings);
+            case "prevPage" -> prevPage(commandSender, strings);
+            case "query" -> query(commandSender, strings);
             default -> {
                 commandSender.sendMessage("Invalid Arguments");
                 yield true;
             }
         };
+    }
+
+    private boolean query(CommandSender commandSender, String[] strings) {
+        if (!(commandSender instanceof Player player)) {
+            commandSender.sendMessage("This command can only be run by a player");
+            return false;
+        }
+
+        var item = player.getInventory().getItemInMainHand();
+        if (item.getType() != Material.WRITTEN_BOOK) {
+            commandSender.sendMessage("Hold the passport that you want to query and try again.");
+            return false;
+        }
+
+        var passport = new Passport(plugin, item);
+        if (!passport.isValidPassport()) {
+            commandSender.sendMessage("Hold the passport that you want to query and try again.");
+            return false;
+        }
+
+        var formatter = DateTimeFormatter.ofPattern("dd MMM yyyy").withLocale(Locale.ENGLISH);
+
+        player.sendMessage(Component.text()
+                .append(Component.text("Passport Information").decorate(TextDecoration.BOLD).color(TextColor.color(255, 150, 0))).appendNewline()
+                .append(Component.text("Passport Number:").decorate(TextDecoration.BOLD)).appendSpace().append(Component.text(passport.getPassportNumber())).appendNewline()
+                .append(Component.text("Issuing Authority:").decorate(TextDecoration.BOLD)).appendSpace().append(Component.text(passport.getIssuingAuthority())).appendNewline()
+                .append(Component.text("Family Name:").decorate(TextDecoration.BOLD)).appendSpace().append(Component.text(passport.getFamilyName())).appendNewline()
+                .append(Component.text("Given Name:").decorate(TextDecoration.BOLD)).appendSpace().append(Component.text(passport.getGivenName())).appendNewline()
+                .append(Component.text("Date of Birth:").decorate(TextDecoration.BOLD)).appendSpace().append(Component.text(passport.getDateOfBirth().format(formatter))).appendNewline()
+                .append(Component.text("Expiry Date:").decorate(TextDecoration.BOLD)).appendSpace().append(
+                        passport.isExpired() ? Component.text(passport.getExpiryDate().format(formatter) + " (Expired)").color(TextColor.color(255, 0, 0)) : Component.text(passport.getExpiryDate().format(formatter))
+                ).appendNewline()
+                .build()
+        );
+
+        return false;
+    }
+
+    private boolean prevPage(CommandSender commandSender, String[] strings) {
+        if (!(commandSender instanceof Player player)) {
+            commandSender.sendMessage("This command can only be run by a player");
+            return false;
+        }
+
+        var state = signingStates.get(player.getUniqueId());
+        if (state == null) {
+            commandSender.sendMessage("Internal error. Please try again.");
+            return false;
+        }
+
+        state.flip(-1);
+        state.openMenu();
+        return true;
+    }
+
+    private boolean nextPage(CommandSender commandSender, String[] strings) {
+        if (!(commandSender instanceof Player player)) {
+            commandSender.sendMessage("This command can only be run by a player");
+            return false;
+        }
+
+        var state = signingStates.get(player.getUniqueId());
+        if (state == null) {
+            commandSender.sendMessage("Internal error. Please try again.");
+            return false;
+        }
+
+        state.flip(1);
+        state.openMenu();
+        return true;
     }
 
     private boolean signContinue(CommandSender commandSender, String[] strings) {
@@ -96,7 +170,7 @@ public class PassportCommand implements CommandExecutor {
             commandSender.sendMessage("Hold the template that you want to sign and try again.");
             return false;
         }
-        var state = new PassportSigningState(plugin, player, item);
+        var state = new PassportSigningState(plugin, player, item, "TAY");
         signingStates.put(player.getUniqueId(), state);
         state.openMenu();
 
