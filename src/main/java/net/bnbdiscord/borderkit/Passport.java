@@ -105,7 +105,7 @@ public class Passport {
         var dateOfBirthString = dateOfBirth.format(formatter).toUpperCase();
 
         var issuingCountryCode = state.getJurisdiction();
-        var issuingCountryName = "TAY";
+        var issuingCountryName = "EXAMPLE STATE";
 
         var mrz1 = "P<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
         var mrz2 = "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";

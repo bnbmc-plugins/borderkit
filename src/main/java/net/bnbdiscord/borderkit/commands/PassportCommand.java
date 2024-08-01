@@ -165,12 +165,28 @@ public class PassportCommand implements CommandExecutor {
             return false;
         }
 
+        if (strings.length != 2) {
+            commandSender.sendMessage("Invalid Arguments");
+            return false;
+        }
+
+        var jurisdiction = strings[1].toUpperCase();
+        if (jurisdiction.length() != 3) {
+            commandSender.sendMessage("Invalid issuing authority");
+            return false;
+        }
+        if (!jurisdiction.equals("XXX")) {
+            commandSender.sendMessage("You do not have permission to issue passports for %s. If you believe this is incorrect, please contact a server administrator.".formatted(jurisdiction));
+            return false;
+        }
+
         var item = player.getInventory().getItemInMainHand();
         if (item.getType() != Material.WRITTEN_BOOK) {
             commandSender.sendMessage("Hold the template that you want to sign and try again.");
             return false;
         }
-        var state = new PassportSigningState(plugin, player, item, "TAY");
+
+        var state = new PassportSigningState(plugin, player, item, jurisdiction);
         signingStates.put(player.getUniqueId(), state);
         state.openMenu();
 
