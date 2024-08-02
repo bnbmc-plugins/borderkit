@@ -145,7 +145,7 @@ public class Passport implements ProxyObject {
         mrz2 = replaceFromIndex(mrz2, 0, passportNumber);
         mrz2 = appendCheckDigit(mrz2, 0, 8);
         mrz2 = replaceFromIndex(mrz2, 10, issuingCountryCode);
-        mrz2 = replaceFromIndex(mrz2, 13, mrzFormatter.format(issueDate)); // TODO: Date of birth
+        mrz2 = replaceFromIndex(mrz2, 13, mrzFormatter.format(dateOfBirth));
         mrz2 = appendCheckDigit(mrz2, 13, 18);
         mrz2 = replaceFromIndex(mrz2, 21, mrzFormatter.format(expiryDate));
         mrz2 = appendCheckDigit(mrz2, 21, 26);
