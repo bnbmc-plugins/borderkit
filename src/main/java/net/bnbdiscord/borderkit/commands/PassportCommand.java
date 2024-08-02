@@ -3,6 +3,8 @@ package net.bnbdiscord.borderkit.commands;
 import de.rapha149.signgui.SignGUI;
 import net.bnbdiscord.borderkit.Passport;
 import net.bnbdiscord.borderkit.PassportSigningState;
+import net.bnbdiscord.borderkit.exceptions.PassportNotFoundException;
+import net.bnbdiscord.borderkit.exceptions.PassportSearchException;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -13,8 +15,13 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.HostAccess;
 import org.jetbrains.annotations.NotNull;
 
+import javax.script.Invocable;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -42,11 +49,67 @@ public class PassportCommand implements CommandExecutor {
             case "nextPage" -> nextPage(commandSender, strings);
             case "prevPage" -> prevPage(commandSender, strings);
             case "query" -> query(commandSender, strings);
+            case "attest" -> attest(commandSender, strings);
             default -> {
                 commandSender.sendMessage("Invalid Arguments");
                 yield true;
             }
         };
+    }
+
+    private boolean attest(CommandSender commandSender, String[] strings) {
+        if (strings.length != 2) {
+            commandSender.sendMessage("Invalid Arguments");
+            return false;
+        }
+
+        var playerName = strings[1];
+        var player = plugin.getServer().getPlayer(playerName);
+        if (player == null) {
+            commandSender.sendMessage("Invalid Player");
+            return false;
+        }
+
+        try {
+            var passport = Passport.forPlayer(plugin, player);
+
+            try (var context = Context.newBuilder("js")
+                    .allowHostAccess(HostAccess.newBuilder()
+                            .allowArrayAccess(true)
+                            .build())
+                    .build()) {
+                context.eval("js", "function handler(passport) { return JSON.stringify(passport); }");
+                var result = context.getBindings("js").getMember("handler").execute(passport);
+                if (result.isString()) {
+                    var resultStr = result.toString();
+                    if (resultStr.isEmpty()) {
+                        // TODO: Approve attestation
+                        return true;
+                    } else {
+                        commandSender.sendMessage(Component.text(resultStr).color(TextColor.color(255, 0, 0)));
+                        // TODO: Fail attestation
+                        return false;
+                    }
+                } else {
+                    commandSender.sendMessage("Return value was not a string");
+                    player.sendMessage(Component.text("BorderKit: There was a problem verifying your passport. Please visit a Border Force officer for manual processing.").color(TextColor.color(255, 0, 0)));
+
+                    // TODO: Fail attestation
+                    return false;
+                }
+            }
+        } catch (PassportSearchException e) {
+            if (e instanceof PassportNotFoundException) {
+                commandSender.sendMessage("The player is not holding a valid ePassport+");
+                player.sendMessage(Component.text("BorderKit: Please ensure your ePassport+ is in your inventory and try again").color(TextColor.color(255, 0, 0)));
+            } else {
+                commandSender.sendMessage("The player is holding more than one valid ePassport+");
+                player.sendMessage(Component.text("BorderKit: Please ensure your inventory contains only one ePassport+ and try again").color(TextColor.color(255, 0, 0)));
+            }
+
+            // TODO: Fail attestation
+            return false;
+        }
     }
 
     private boolean query(CommandSender commandSender, String[] strings) {

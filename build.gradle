@@ -25,6 +25,10 @@ dependencies {
 
     implementation "de.rapha149.signgui:signgui:2.3.6"
     shadow "de.rapha149.signgui:signgui:2.3.6"
+
+    implementation 'org.graalvm.sdk:graal-sdk:22.3.0'
+    implementation 'org.graalvm.js:js:22.3.0'
+    implementation 'org.graalvm.js:js-scriptengine:22.3.0'
 }
 
 def targetJavaVersion = 17

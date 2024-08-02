@@ -1,24 +1,30 @@
 package net.bnbdiscord.borderkit;
 
+import net.bnbdiscord.borderkit.exceptions.MultiplePassportsFoundException;
+import net.bnbdiscord.borderkit.exceptions.PassportNotFoundException;
+import net.bnbdiscord.borderkit.exceptions.PassportSearchException;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
+import org.graalvm.polyglot.HostAccess;
+import org.graalvm.polyglot.Value;
+import org.graalvm.polyglot.proxy.ProxyObject;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Locale;
-import java.util.Random;
+import java.util.*;
 
-public class Passport {
+public class Passport implements ProxyObject {
     private final BookMeta meta;
     private final NamespacedKey passportKey;
     private final NamespacedKey holderGivenNameKey;
@@ -39,6 +45,27 @@ public class Passport {
         this.authorityKey = new NamespacedKey(plugin, "authority");
         this.dateOfBirthKey = new NamespacedKey(plugin, "dateOfBirth");
         this.placeOfBirthKey = new NamespacedKey(plugin, "placeOfBirth");
+    }
+
+    public static Passport forPlayer(Plugin plugin, Player player) throws PassportSearchException {
+        var passportKey = new NamespacedKey(plugin, "passport");
+        List<ItemStack> passports = new ArrayList<>();
+
+        for (var itemStack : player.getInventory()) {
+            if (itemStack != null && itemStack.getItemMeta() instanceof BookMeta bookMeta && itemStack.getType() == Material.WRITTEN_BOOK) {
+                if (Boolean.TRUE.equals(bookMeta.getPersistentDataContainer().get(passportKey, PersistentDataType.BOOLEAN))) {
+                    passports.add(itemStack);
+                }
+            }
+        }
+
+        if (passports.isEmpty()) {
+            throw new PassportNotFoundException();
+        } else if (passports.size() > 1) {
+            throw new MultiplePassportsFoundException();
+        } else {
+            return new Passport(plugin, passports.get(0));
+        }
     }
 
     private static String replaceFromIndex(String str1, int index, String str2) {
@@ -219,5 +246,37 @@ public class Passport {
 
     public boolean isExpired() {
         return getExpiryDate().isBefore(ZonedDateTime.now());
+    }
+
+    private static final Set<String> PROPERTIES = Set.of("givenName", "familyName", "issuingAuthority", "expiryDate", "dateOfBirth", "placeOfBirth", "isExpired");
+
+    @Override
+    public Object getMember(String key) {
+        return switch (key) {
+            case "givenName" -> getGivenName();
+            case "familyName" -> getFamilyName();
+            case "issuingAuthority" -> getIssuingAuthority();
+            case "expiryDate" ->  Date.from(getExpiryDate().toInstant());
+            case "dateOfBirth" -> Date.from(getDateOfBirth().toInstant());
+            case "placeOfBirth" -> getPlaceOfBirth();
+            case "isExpired" -> isExpired();
+            default -> throw new UnsupportedOperationException();
+        };
+    }
+
+    @Override
+    public Object getMemberKeys() {
+        return PROPERTIES.toArray();
+    }
+
+    @Override
+    public boolean hasMember(String key) {
+        return PROPERTIES.contains(key);
+    }
+
+    @Override
+    public void putMember(String key, Value value) {
+        // Not allowed
+        throw new UnsupportedOperationException();
     }
 }
