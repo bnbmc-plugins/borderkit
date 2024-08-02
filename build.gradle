@@ -29,6 +29,8 @@ dependencies {
     implementation 'org.graalvm.sdk:graal-sdk:22.3.0'
     implementation 'org.graalvm.js:js:22.3.0'
     implementation 'org.graalvm.js:js-scriptengine:22.3.0'
+    implementation 'com.j256.ormlite:ormlite-jdbc:5.0'
+    implementation 'org.xerial:sqlite-jdbc:3.41.2.2'
 }
 
 def targetJavaVersion = 17

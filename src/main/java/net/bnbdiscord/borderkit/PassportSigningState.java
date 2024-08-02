@@ -1,5 +1,6 @@
 package net.bnbdiscord.borderkit;
 
+import net.bnbdiscord.borderkit.database.Jurisdiction;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -11,7 +12,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.plugin.Plugin;
 
-import javax.naming.NameNotFoundException;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -31,11 +31,11 @@ public class PassportSigningState {
 
     private final ItemStack template;
 
-    public String getJurisdiction() {
+    public Jurisdiction getJurisdiction() {
         return jurisdiction;
     }
 
-    private final String jurisdiction;
+    private final Jurisdiction jurisdiction;
 
     private Field[] fields = new Field[] {
             new Field("Given Names", "givenNames"),
@@ -130,7 +130,7 @@ public class PassportSigningState {
         }
     }
 
-    public PassportSigningState(Plugin plugin, Player player, ItemStack template, String jurisdiction) {
+    public PassportSigningState(Plugin plugin, Player player, ItemStack template, Jurisdiction jurisdiction) {
         this.plugin = plugin;
         this.player = player;
         this.template = template;
@@ -173,7 +173,7 @@ public class PassportSigningState {
         var heading = Component.text()
                 .append(Component.text("ISSUE A NEW"))
                 .appendNewline()
-                .append(Component.text(jurisdiction + " PASSPORT").decorate(TextDecoration.BOLD))
+                .append(Component.text(jurisdiction.getCode() + " PASSPORT").decorate(TextDecoration.BOLD))
                 .appendNewline()
                 .appendNewline();
 
@@ -181,7 +181,7 @@ public class PassportSigningState {
 
         meta.addPages(
                 (switch (page) {
-                    case 0 -> heading.append(Component.text("Fill out each field to issue a new %s passport.".formatted(jurisdiction))).appendNewline()
+                    case 0 -> heading.append(Component.text("Fill out each field to issue a new %s passport.".formatted(jurisdiction.getCode()))).appendNewline()
                             .appendNewline()
                             .append(Component.text("<!> WARNING:").decorate(TextDecoration.BOLD).color(TextColor.color(255, 0, 0))).append(Component.text(" Closing this book prematurely will cause you to lose all the information you have entered."));
                     case 1 -> heading.append(fields[0].textComponent())

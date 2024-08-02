@@ -3,6 +3,8 @@ package net.bnbdiscord.borderkit.commands;
 import de.rapha149.signgui.SignGUI;
 import net.bnbdiscord.borderkit.Passport;
 import net.bnbdiscord.borderkit.PassportSigningState;
+import net.bnbdiscord.borderkit.database.DatabaseManager;
+import net.bnbdiscord.borderkit.database.Jurisdiction;
 import net.bnbdiscord.borderkit.exceptions.PassportNotFoundException;
 import net.bnbdiscord.borderkit.exceptions.PassportSearchException;
 import net.kyori.adventure.text.Component;
@@ -19,21 +21,21 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
 import org.jetbrains.annotations.NotNull;
 
-import javax.script.Invocable;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
+import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class PassportCommand implements CommandExecutor {
     private final Plugin plugin;
     private final NamespacedKey key;
+    private final DatabaseManager db;
 
     public Dictionary<UUID, PassportSigningState> signingStates = new Hashtable<>();
 
-    public PassportCommand(Plugin plugin) {
+    public PassportCommand(Plugin plugin, DatabaseManager db) {
         this.plugin = plugin;
         this.key = new NamespacedKey(plugin, "key");
+        this.db = db;
     }
 
     @Override
@@ -43,18 +45,85 @@ public class PassportCommand implements CommandExecutor {
             return false;
         }
 
-        return switch (strings[0]) {
-            case "sign" -> signPassport(commandSender, strings);
-            case "signContinue" -> signContinue(commandSender, strings);
-            case "nextPage" -> nextPage(commandSender, strings);
-            case "prevPage" -> prevPage(commandSender, strings);
-            case "query" -> query(commandSender, strings);
-            case "attest" -> attest(commandSender, strings);
-            default -> {
-                commandSender.sendMessage("Invalid Arguments");
-                yield true;
-            }
-        };
+        try {
+            return switch (strings[0]) {
+                case "sign" -> signPassport(commandSender, strings);
+                case "signContinue" -> signContinue(commandSender, strings);
+                case "nextPage" -> nextPage(commandSender, strings);
+                case "prevPage" -> prevPage(commandSender, strings);
+                case "query" -> query(commandSender, strings);
+                case "attest" -> attest(commandSender, strings);
+                case "jurisdiction" -> jurisdiction(commandSender, strings);
+                default -> {
+                    commandSender.sendMessage("Invalid Arguments");
+                    yield true;
+                }
+            };
+        } catch (SQLException e) {
+            commandSender.sendMessage("SQL Error");
+            return false;
+        }
+    }
+
+    private boolean jurisdiction(CommandSender commandSender, String[] strings) throws SQLException {
+        if (strings.length < 2) {
+            commandSender.sendMessage("Invalid Arguments");
+            return false;
+        }
+
+        if (!commandSender.hasPermission("borderkit.jurisdiction")) {
+            commandSender.sendMessage("You don't have permissions to use this command.");
+        }
+
+        String code;
+        String name;
+        var jurisdiction = new Jurisdiction();
+        switch (strings[1]) {
+            case "add":
+                if (strings.length < 4) {
+                    commandSender.sendMessage("Invalid Arguments");
+                    return false;
+                }
+
+                code = strings[2];
+                name = String.join(" ", java.util.Arrays.copyOfRange(strings, 3, strings.length));
+                jurisdiction.setCode(code.toUpperCase());
+                jurisdiction.setName(name);
+                db.getJurisdictionDao().create(jurisdiction);
+                commandSender.sendMessage("Added " + code.toUpperCase() + " as " + name);
+                return true;
+            case "update":
+                if (strings.length < 4) {
+                    commandSender.sendMessage("Invalid Arguments");
+                    return false;
+                }
+
+                code = strings[2];
+                name = String.join(" ", java.util.Arrays.copyOfRange(strings, 3, strings.length));
+                jurisdiction.setCode(code.toUpperCase());
+                jurisdiction.setName(name);
+                db.getJurisdictionDao().update(jurisdiction);
+                commandSender.sendMessage("Updated " + code.toUpperCase() + " as " + name);
+                return true;
+            case "remove":
+                if (strings.length != 3) {
+                    commandSender.sendMessage("Invalid Arguments");
+                    return false;
+                }
+
+                code = strings[2];
+                var jurisdictions = db.getJurisdictionDao().queryForEq("code", code);
+                if (jurisdictions.isEmpty()) {
+                    commandSender.sendMessage("That jurisdiction does not exist");
+                    return false;
+                }
+
+                db.getJurisdictionDao().delete(jurisdictions.get(0));
+                commandSender.sendMessage("Removed " + jurisdictions.get(0).getName() + " (" + code.toUpperCase() + ")");
+                return true;
+        }
+
+        return false;
     }
 
     private boolean attest(CommandSender commandSender, String[] strings) {
@@ -223,7 +292,7 @@ public class PassportCommand implements CommandExecutor {
         return false;
     }
 
-    private boolean signPassport(CommandSender commandSender, String[] strings) {
+    private boolean signPassport(CommandSender commandSender, String[] strings) throws SQLException {
         if (!(commandSender instanceof Player player)) {
             commandSender.sendMessage("This command can only be run by a player");
             return false;
@@ -234,13 +303,18 @@ public class PassportCommand implements CommandExecutor {
             return false;
         }
 
-        var jurisdiction = strings[1].toUpperCase();
-        if (jurisdiction.length() != 3) {
+        var jurisdictionCode = strings[1].toUpperCase();
+        if (jurisdictionCode.length() != 3) {
             commandSender.sendMessage("Invalid issuing authority");
             return false;
         }
-        if (!player.hasPermission("borderkit.passport.sign." + jurisdiction.toLowerCase())) {
-            commandSender.sendMessage("You do not have permission to issue passports for %s. If you believe this is incorrect, please contact a server administrator.".formatted(jurisdiction));
+        if (!player.hasPermission("borderkit.passport.sign." + jurisdictionCode.toLowerCase())) {
+            commandSender.sendMessage("You do not have permission to issue passports for %s. If you believe this is incorrect, please contact a server administrator.".formatted(jurisdictionCode));
+            return false;
+        }
+        var jurisdiction = db.getJurisdictionDao().queryForEq("code", jurisdictionCode);
+        if (jurisdiction.isEmpty()) {
+            commandSender.sendMessage("Invalid issuing authority");
             return false;
         }
 
@@ -250,7 +324,7 @@ public class PassportCommand implements CommandExecutor {
             return false;
         }
 
-        var state = new PassportSigningState(plugin, player, item, jurisdiction);
+        var state = new PassportSigningState(plugin, player, item, jurisdiction.get(0));
         signingStates.put(player.getUniqueId(), state);
         state.openMenu();
 

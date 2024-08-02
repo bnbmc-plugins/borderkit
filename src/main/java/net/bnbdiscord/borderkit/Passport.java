@@ -134,8 +134,8 @@ public class Passport implements ProxyObject {
         var dateOfBirth = LocalDate.parse(state.fieldValue("dateOfBirth"), inputFormatter).atStartOfDay(ZoneOffset.UTC);
         var dateOfBirthString = dateOfBirth.format(formatter).toUpperCase();
 
-        var issuingCountryCode = state.getJurisdiction();
-        var issuingCountryName = "EXAMPLE STATE";
+        var issuingCountryCode = state.getJurisdiction().getCode();
+        var issuingCountryName = state.getJurisdiction().getName();
 
         var mrz1 = "P<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
         var mrz2 = "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
