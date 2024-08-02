@@ -239,7 +239,7 @@ public class PassportCommand implements CommandExecutor {
             commandSender.sendMessage("Invalid issuing authority");
             return false;
         }
-        if (!jurisdiction.equals("XXX")) {
+        if (!player.hasPermission("borderkit.passport.sign." + jurisdiction.toLowerCase())) {
             commandSender.sendMessage("You do not have permission to issue passports for %s. If you believe this is incorrect, please contact a server administrator.".formatted(jurisdiction));
             return false;
         }
