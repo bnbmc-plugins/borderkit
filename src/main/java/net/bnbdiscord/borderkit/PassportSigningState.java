@@ -40,18 +40,6 @@ public class PassportSigningState {
     private Field[] fields = new Field[] {
             new Field("Given Names", "givenNames"),
             new Field("Family Names", "familyNames"),
-            new Field("Place of Birth", "placeOfBirth"),
-            new Field("Date of Birth", "dateOfBirth", (value) -> {
-                var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-                try {
-                    LocalDate.parse(value, formatter);
-                } catch (DateTimeParseException e) {
-                    return "Enter a date in the form YYYY-MM-DD";
-                }
-
-                return "";
-            }),
             new Field("Expiry", "expiry", (value) -> {
                 var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -65,7 +53,20 @@ public class PassportSigningState {
                 }
 
                 return "";
-            })
+            }),
+            new Field("Date of Birth", "dateOfBirth", (value) -> {
+                var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+                try {
+                    LocalDate.parse(value, formatter);
+                } catch (DateTimeParseException e) {
+                    return "Enter a date in the form YYYY-MM-DD";
+                }
+
+                return "";
+            }),
+            new Field("Place of Birth Line 1", "placeOfBirth"),
+            new Field("Place of Birth Line 2", "placeOfBirth2"),
     };
 
     public void flip(int i) {
@@ -190,7 +191,9 @@ public class PassportSigningState {
                             .append(fields[2].textComponent());
                     case 2 -> heading.append(fields[3].textComponent())
                             .appendNewline()
-                            .append(fields[4].textComponent());
+                            .append(fields[4].textComponent())
+                            .appendNewline()
+                            .append(fields[5].textComponent());
                     case 3 -> Component.text()
                             .append(Component.text("SIGN PASSPORT").decorate(TextDecoration.BOLD)).appendNewline()
                             .append(Component.text("Review the information that you have entered before you sign this passport. Once it has been signed, it cannot be edited.")).appendNewline()

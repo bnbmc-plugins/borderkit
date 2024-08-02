@@ -25,6 +25,7 @@ public class Passport {
     private final NamespacedKey holderFamilyNameKey;
     private final NamespacedKey passportNumberKey;
     private final NamespacedKey dateOfBirthKey;
+    private final NamespacedKey placeOfBirthKey;
     private final NamespacedKey expiryKey;
     private final NamespacedKey authorityKey;
 
@@ -37,6 +38,7 @@ public class Passport {
         this.expiryKey = new NamespacedKey(plugin, "expiry");
         this.authorityKey = new NamespacedKey(plugin, "authority");
         this.dateOfBirthKey = new NamespacedKey(plugin, "dateOfBirth");
+        this.placeOfBirthKey = new NamespacedKey(plugin, "placeOfBirth");
     }
 
     private static String replaceFromIndex(String str1, int index, String str2) {
@@ -95,6 +97,7 @@ public class Passport {
         var givenNames = state.fieldValue("givenNames");
         var familyNames = state.fieldValue("familyNames");
         var placeOfBirth = state.fieldValue("placeOfBirth");
+        var placeOfBirth2 = state.fieldValue("placeOfBirth2");
 
         var issueDate = ZonedDateTime.now(ZoneOffset.UTC);
         var expiryDate = LocalDate.parse(state.fieldValue("expiry"), inputFormatter).atStartOfDay(ZoneOffset.UTC);
@@ -139,7 +142,8 @@ public class Passport {
                 .build());
         meta.page(3, Component.text()
                 .append(Component.text("PLACE OF BIRTH").color(TextColor.color(100, 100, 255))).appendNewline()
-                .append(Component.text(placeOfBirth).hoverEvent(HoverEvent.showText(Component.text(placeOfBirth)))).appendNewline()
+                .append(Component.text(placeOfBirth).hoverEvent(HoverEvent.showText(Component.text(placeOfBirth).appendNewline().append(Component.text(placeOfBirth2))))).appendNewline()
+                .append(Component.text(placeOfBirth2).hoverEvent(HoverEvent.showText(Component.text(placeOfBirth).appendNewline().append(Component.text(placeOfBirth2))))).appendNewline()
                 .appendNewline()
                 .append(Component.text("DATE OF BIRTH").color(TextColor.color(100, 100, 255))).appendNewline()
                 .append(Component.text(dateOfBirthString).hoverEvent(HoverEvent.showText(Component.text(dateOfBirthString)))).appendNewline()
@@ -147,7 +151,6 @@ public class Passport {
                 .append(Component.text("AUTHORITY / CODE").color(TextColor.color(100, 100, 255))).appendNewline()
                 .append(Component.text(issuingCountryName).hoverEvent(HoverEvent.showText(Component.text(issuingCountryName)))).appendNewline()
                 .append(Component.text(issuingCountryCode).hoverEvent(HoverEvent.showText(Component.text(issuingCountryCode)))).appendNewline()
-                .appendNewline()
                 .appendNewline()
                 .append(Component.text(mrz1.substring(14, 28))).appendNewline()
                 .append(Component.text(mrz2.substring(14, 28))).appendNewline()
@@ -173,6 +176,7 @@ public class Passport {
         meta.getPersistentDataContainer().set(holderGivenNameKey, PersistentDataType.STRING, givenNames);
         meta.getPersistentDataContainer().set(holderFamilyNameKey, PersistentDataType.STRING, familyNames);
         meta.getPersistentDataContainer().set(authorityKey, PersistentDataType.STRING, issuingCountryCode);
+        meta.getPersistentDataContainer().set(placeOfBirthKey, PersistentDataType.STRING, (placeOfBirth + " " + placeOfBirth2).trim());
         meta.getPersistentDataContainer().set(expiryKey, PersistentDataType.LONG, expiryDate.toEpochSecond());
         meta.getPersistentDataContainer().set(dateOfBirthKey, PersistentDataType.LONG, dateOfBirth.toEpochSecond());
 
@@ -207,6 +211,10 @@ public class Passport {
 
     public ZonedDateTime getDateOfBirth() {
         return ZonedDateTime.ofInstant(Instant.ofEpochSecond(meta.getPersistentDataContainer().get(dateOfBirthKey, PersistentDataType.LONG)), ZoneOffset.UTC);
+    }
+
+    public String getPlaceOfBirth() {
+        return meta.getPersistentDataContainer().get(placeOfBirthKey, PersistentDataType.STRING);
     }
 
     public boolean isExpired() {

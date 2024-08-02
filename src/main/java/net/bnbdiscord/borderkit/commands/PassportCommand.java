@@ -76,6 +76,7 @@ public class PassportCommand implements CommandExecutor {
                 .append(Component.text("Family Name:").decorate(TextDecoration.BOLD)).appendSpace().append(Component.text(passport.getFamilyName())).appendNewline()
                 .append(Component.text("Given Name:").decorate(TextDecoration.BOLD)).appendSpace().append(Component.text(passport.getGivenName())).appendNewline()
                 .append(Component.text("Date of Birth:").decorate(TextDecoration.BOLD)).appendSpace().append(Component.text(passport.getDateOfBirth().format(formatter))).appendNewline()
+                .append(Component.text("Place of Birth:").decorate(TextDecoration.BOLD)).appendSpace().append(Component.text(passport.getPlaceOfBirth())).appendNewline()
                 .append(Component.text("Expiry Date:").decorate(TextDecoration.BOLD)).appendSpace().append(
                         passport.isExpired() ? Component.text(passport.getExpiryDate().format(formatter) + " (Expired)").color(TextColor.color(255, 0, 0)) : Component.text(passport.getExpiryDate().format(formatter))
                 ).appendNewline()
