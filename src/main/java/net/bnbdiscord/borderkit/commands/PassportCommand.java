@@ -5,9 +5,11 @@ import net.bnbdiscord.borderkit.Passport;
 import net.bnbdiscord.borderkit.PassportSigningState;
 import net.bnbdiscord.borderkit.database.DatabaseManager;
 import net.bnbdiscord.borderkit.database.Jurisdiction;
+import net.bnbdiscord.borderkit.database.Ruleset;
 import net.bnbdiscord.borderkit.exceptions.PassportNotFoundException;
 import net.bnbdiscord.borderkit.exceptions.PassportSearchException;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
@@ -16,6 +18,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.plugin.Plugin;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
@@ -54,6 +57,7 @@ public class PassportCommand implements CommandExecutor {
                 case "query" -> query(commandSender, strings);
                 case "attest" -> attest(commandSender, strings);
                 case "jurisdiction" -> jurisdiction(commandSender, strings);
+                case "ruleset" -> ruleset(commandSender, strings);
                 default -> {
                     commandSender.sendMessage("Invalid Arguments");
                     yield true;
@@ -63,6 +67,80 @@ public class PassportCommand implements CommandExecutor {
             commandSender.sendMessage("SQL Error");
             return false;
         }
+    }
+
+    private boolean ruleset(CommandSender commandSender, String[] strings) throws SQLException {
+        if (strings.length < 3) {
+            commandSender.sendMessage("Invalid Arguments");
+            return false;
+        }
+
+        var code = strings[2];
+        var jurisdictions = db.getJurisdictionDao().queryForEq("code", code);
+        if (jurisdictions.isEmpty()) {
+            commandSender.sendMessage("That jurisdiction does not exist");
+            return false;
+        }
+
+        var jurisdiction = jurisdictions.get(0);
+        if (!commandSender.hasPermission("borderkit.jurisdiction." + code.toLowerCase())) {
+            commandSender.sendMessage("You don't have permission to manage rulesets for " + jurisdiction.getName());
+            return false;
+        }
+
+        String name = String.join(" ", Arrays.copyOfRange(strings, 3, strings.length));
+        switch (strings[1]) {
+            case "set":
+                if (strings.length < 4) {
+                    commandSender.sendMessage("Invalid Arguments");
+                    return false;
+                }
+
+                String programCode = null;
+                if (commandSender instanceof Player player) {
+                    var item = player.getInventory().getItemInMainHand();
+                    if (item.getType() == Material.WRITABLE_BOOK || item.getType() == Material.WRITTEN_BOOK) {
+                        var meta = (BookMeta) item.getItemMeta();
+                        programCode = String.join("\n", meta.pages().stream().map(page -> ((TextComponent) page).content()).toList());
+                    }
+                }
+
+                if (programCode == null) {
+                    commandSender.sendMessage("No code provided. Please hold a book with code.");
+                    return false;
+                }
+
+                var ruleset = new Ruleset();
+                ruleset.setJurisdiction(jurisdiction);
+                ruleset.setName(name);
+                ruleset.setLanguage("js");
+                ruleset.setCode(programCode);
+                db.getRulesetDao().createOrUpdate(ruleset);
+
+                commandSender.sendMessage("Added " + name + " to " + jurisdiction.getName());
+                return true;
+            case "remove":
+                if (strings.length != 4) {
+                    commandSender.sendMessage("Invalid Arguments");
+                    return false;
+                }
+
+                var rulesets = db.getRulesetDao().queryForFieldValuesArgs(Map.of(
+                        "jurisdiction", jurisdiction,
+                        "name", name,
+                        "language", "js"
+                ));
+                if (rulesets.isEmpty()) {
+                    commandSender.sendMessage("No ruleset by that name exists");
+                    return false;
+                }
+
+                db.getRulesetDao().delete(rulesets.get(0));
+                commandSender.sendMessage("Removed " + rulesets.get(0).getName());
+                return true;
+        }
+
+        return false;
     }
 
     private boolean jurisdiction(CommandSender commandSender, String[] strings) throws SQLException {
@@ -86,7 +164,7 @@ public class PassportCommand implements CommandExecutor {
                 }
 
                 code = strings[2];
-                name = String.join(" ", java.util.Arrays.copyOfRange(strings, 3, strings.length));
+                name = String.join(" ", Arrays.copyOfRange(strings, 3, strings.length));
                 jurisdiction.setCode(code.toUpperCase());
                 jurisdiction.setName(name);
                 db.getJurisdictionDao().create(jurisdiction);
@@ -99,7 +177,7 @@ public class PassportCommand implements CommandExecutor {
                 }
 
                 code = strings[2];
-                name = String.join(" ", java.util.Arrays.copyOfRange(strings, 3, strings.length));
+                name = String.join(" ", Arrays.copyOfRange(strings, 3, strings.length));
                 jurisdiction.setCode(code.toUpperCase());
                 jurisdiction.setName(name);
                 db.getJurisdictionDao().update(jurisdiction);

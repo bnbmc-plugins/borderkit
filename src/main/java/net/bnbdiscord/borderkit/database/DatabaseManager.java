@@ -9,6 +9,7 @@ import java.sql.SQLException;
 
 public class DatabaseManager {
     private Dao<Jurisdiction, Long> jurisdictionDao;
+    private Dao<Ruleset, Long> rulesetDao;
 
     public DatabaseManager() {
         try {
@@ -16,6 +17,9 @@ public class DatabaseManager {
 
             TableUtils.createTableIfNotExists(connectionSource, Jurisdiction.class);
             jurisdictionDao = DaoManager.createDao(connectionSource, Jurisdiction.class);
+
+            TableUtils.createTableIfNotExists(connectionSource, Ruleset.class);
+            rulesetDao = DaoManager.createDao(connectionSource, Ruleset.class);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -23,5 +27,9 @@ public class DatabaseManager {
 
     public Dao<Jurisdiction, Long> getJurisdictionDao() {
         return jurisdictionDao;
+    }
+
+    public Dao<Ruleset, Long> getRulesetDao() {
+        return rulesetDao;
     }
 }
