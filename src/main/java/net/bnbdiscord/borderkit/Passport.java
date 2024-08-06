@@ -23,6 +23,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Consumer;
 
 public class Passport implements ProxyObject {
     private final BookMeta meta;
@@ -47,25 +48,37 @@ public class Passport implements ProxyObject {
         this.placeOfBirthKey = new NamespacedKey(plugin, "placeOfBirth");
     }
 
-    public static Passport forPlayer(Plugin plugin, Player player) throws PassportSearchException {
-        var passportKey = new NamespacedKey(plugin, "passport");
+    public static void forPlayer(Plugin plugin, Player player, Consumer<Passport> callback) {
         List<ItemStack> passports = new ArrayList<>();
 
+        for (var itemStack : player.getEnderChest()) {
+            if (isValidPassport(plugin, itemStack)) {
+                passports.add(itemStack);
+            }
+        }
         for (var itemStack : player.getInventory()) {
-            if (itemStack != null && itemStack.getItemMeta() instanceof BookMeta bookMeta && itemStack.getType() == Material.WRITTEN_BOOK) {
-                if (Boolean.TRUE.equals(bookMeta.getPersistentDataContainer().get(passportKey, PersistentDataType.BOOLEAN))) {
-                    passports.add(itemStack);
-                }
+            if (isValidPassport(plugin, itemStack)) {
+                passports.add(itemStack);
             }
         }
 
         if (passports.isEmpty()) {
-            throw new PassportNotFoundException();
+            callback.accept(null);
         } else if (passports.size() > 1) {
-            throw new MultiplePassportsFoundException();
+            PassportSelector.selectPassport(player, plugin, callback);
         } else {
-            return new Passport(plugin, passports.get(0));
+            callback.accept(new Passport(plugin, passports.get(0)));
         }
+    }
+
+    public static boolean isValidPassport(Plugin plugin, ItemStack itemStack) {
+        var passportKey = new NamespacedKey(plugin, "passport");
+        if (itemStack != null && itemStack.getItemMeta() instanceof BookMeta bookMeta && itemStack.getType() == Material.WRITTEN_BOOK) {
+            if (Boolean.TRUE.equals(bookMeta.getPersistentDataContainer().get(passportKey, PersistentDataType.BOOLEAN))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String replaceFromIndex(String str1, int index, String str2) {

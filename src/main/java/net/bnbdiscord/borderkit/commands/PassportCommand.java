@@ -232,9 +232,9 @@ public class PassportCommand implements CommandExecutor {
     }
 
     private boolean attest(CommandSender commandSender, String[] strings) throws SQLException {
+        setCommandBlockStrength(commandSender, 0);
         if (strings.length != 4) {
             commandSender.sendMessage("Invalid Arguments");
-            setCommandBlockStrength(commandSender, 0);
             return false;
         }
 
@@ -243,7 +243,6 @@ public class PassportCommand implements CommandExecutor {
         var rulesets = db.getRulesetDao().queryForFieldValues(Map.of("jurisdiction_id", jurisdictionCode, "name", rulesetName));
         if (rulesets.isEmpty()) {
             commandSender.sendMessage("Invalid Ruleset");
-            setCommandBlockStrength(commandSender, 0);
             return false;
         }
 
@@ -253,65 +252,52 @@ public class PassportCommand implements CommandExecutor {
         var player = plugin.getServer().getPlayer(playerName);
         if (player == null) {
             commandSender.sendMessage("Invalid Player");
-            setCommandBlockStrength(commandSender, 0);
             return false;
         }
 
-        try {
+        Passport.forPlayer(plugin, player, passport -> {
             try {
-                var passport = Passport.forPlayer(plugin, player);
-
-                try (var context = Context.newBuilder("js")
-                        .allowHostAccess(HostAccess.newBuilder()
-                                .allowArrayAccess(true)
-                                .build())
-                        .build()) {
-                    context.eval("js", rulesets.get(0).getCode());
-                    var result = context.getBindings("js").getMember("handler").execute(passport, new PlayerProxy(player));
-                    if (result.isBoolean()) {
-                        if (result.asBoolean()) {
-                            if (!setCommandBlockStrength(commandSender, 1)) {
-                                commandSender.sendMessage(Component.text()
-                                        .append(Component.text("Attestation succeeded for the passport held by " + player.getName()).color(TextColor.color(0, 200, 0))).appendNewline()
-                                        .append(Component.text("Ruleset: ").decorate(TextDecoration.BOLD)).append(Component.text(rulesets.get(0).getName()))
-                                );
+                try {
+                    try (var context = Context.newBuilder("js")
+                            .allowHostAccess(HostAccess.newBuilder()
+                                    .allowArrayAccess(true)
+                                    .build())
+                            .build()) {
+                        context.eval("js", rulesets.get(0).getCode());
+                        var handlerFunction = context.getBindings("js").getMember("handler");
+                        var result = handlerFunction.execute(passport, new PlayerProxy(player));
+                        if (result.isBoolean()) {
+                            if (result.asBoolean()) {
+                                if (!setCommandBlockStrength(commandSender, 1)) {
+                                    commandSender.sendMessage(Component.text()
+                                            .append(Component.text("Attestation succeeded for the passport held by " + player.getName()).color(TextColor.color(0, 200, 0))).appendNewline()
+                                            .append(Component.text("Ruleset: ").decorate(TextDecoration.BOLD)).append(Component.text(rulesets.get(0).getName()))
+                                    );
+                                }
+                            } else {
+                                throw new AttestationException();
                             }
-
-                            return true;
                         } else {
+                            commandSender.sendMessage("Return value was not a boolean");
+                            player.sendMessage(Component.text("BorderKit: There was a problem verifying your passport. Please visit a Border Force officer for manual processing.").color(TextColor.color(255, 0, 0)));
+
                             throw new AttestationException();
                         }
-                    } else {
-                        commandSender.sendMessage("Return value was not a boolean");
-                        player.sendMessage(Component.text("BorderKit: There was a problem verifying your passport. Please visit a Border Force officer for manual processing.").color(TextColor.color(255, 0, 0)));
-
-                        throw new AttestationException();
                     }
+                } catch (PolyglotException e) {
+                    commandSender.sendMessage("An exception was thrown from the handler code. " + e.getMessage());
+                    throw new AttestationException();
                 }
-            } catch (PassportSearchException e) {
-                if (e instanceof PassportNotFoundException) {
-                    commandSender.sendMessage("The player is not holding a valid ePassport+");
-                    player.sendMessage(Component.text("BorderKit: Please ensure your ePassport+ is in your inventory and try again").color(TextColor.color(255, 0, 0)));
-                } else {
-                    commandSender.sendMessage("The player is holding more than one valid ePassport+");
-                    player.sendMessage(Component.text("BorderKit: Please ensure your inventory contains only one ePassport+ and try again").color(TextColor.color(255, 0, 0)));
+            } catch (AttestationException e) {
+                if (!setCommandBlockStrength(commandSender, 0)) {
+                    commandSender.sendMessage(Component.text()
+                            .append(Component.text("Attestation failed for the passport held by " + player.getName()).color(TextColor.color(255, 0, 0))).appendNewline()
+                            .append(Component.text("Ruleset: ").decorate(TextDecoration.BOLD)).append(Component.text(rulesets.get(0).getName()))
+                    );
                 }
-
-                throw new AttestationException();
-            } catch (PolyglotException e) {
-                commandSender.sendMessage("An exception was thrown from the handler code. " + e.getMessage());
-                throw new AttestationException();
             }
-        } catch (AttestationException e) {
-            if (!setCommandBlockStrength(commandSender, 0)) {
-                commandSender.sendMessage(Component.text()
-                        .append(Component.text("Attestation failed for the passport held by " + player.getName()).color(TextColor.color(255, 0, 0))).appendNewline()
-                        .append(Component.text("Ruleset: ").decorate(TextDecoration.BOLD)).append(Component.text(rulesets.get(0).getName()))
-                );
-            }
-
-            return false;
-        }
+        });
+        return true;
     }
 
     private boolean query(CommandSender commandSender, String[] strings) {
