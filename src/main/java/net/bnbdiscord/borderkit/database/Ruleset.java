@@ -2,9 +2,15 @@ package net.bnbdiscord.borderkit.database;
 
 import com.j256.ormlite.field.DatabaseField;
 
+import java.util.Date;
+
 public class Ruleset {
+    public Ruleset() {
+        id = new Date().toInstant().getEpochSecond();
+    }
+
     @DatabaseField(id = true)
-    private int id;
+    private long id;
     
     @DatabaseField(foreign = true, foreignAutoRefresh = true, uniqueCombo = true)
     private Jurisdiction jurisdiction;
@@ -18,7 +24,7 @@ public class Ruleset {
     @DatabaseField
     private String code;
 
-    public int getId() {
+    public long getId() {
         return id;
     }
 
@@ -52,5 +58,9 @@ public class Ruleset {
 
     public void setCode(String code) {
         this.code = code;
+    }
+
+    public void setId(long id) {
+        this.id = id;
     }
 }
