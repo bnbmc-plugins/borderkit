@@ -4,6 +4,7 @@ import de.rapha149.signgui.SignGUI;
 import net.bnbdiscord.borderkit.Passport;
 import net.bnbdiscord.borderkit.PassportSigningState;
 import net.bnbdiscord.borderkit.PlayerProxy;
+import net.bnbdiscord.borderkit.PlayerTracker;
 import net.bnbdiscord.borderkit.database.DatabaseManager;
 import net.bnbdiscord.borderkit.database.Jurisdiction;
 import net.bnbdiscord.borderkit.database.Ruleset;
@@ -31,6 +32,8 @@ import org.jetbrains.annotations.NotNull;
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+
+import static net.bnbdiscord.borderkit.Utils.setCommandBlockStrength;
 
 public class PassportCommand implements CommandExecutor {
     private final Plugin plugin;
@@ -218,19 +221,8 @@ public class PassportCommand implements CommandExecutor {
         return false;
     }
 
-    private boolean setCommandBlockStrength(CommandSender commandSender, int strength) {
-        if (commandSender instanceof BlockCommandSender bcSender && bcSender.getBlock().getState() instanceof CommandBlock cb) {
-            Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, () -> {
-                cb.setSuccessCount(strength);
-                cb.update();
-            });
-            return true;
-        }
-        return false;
-    }
-
     private boolean attest(CommandSender commandSender, String[] strings) throws SQLException {
-        setCommandBlockStrength(commandSender, 0);
+        setCommandBlockStrength(plugin, commandSender, 0);
         if (strings.length != 4) {
             commandSender.sendMessage("Invalid Arguments");
             return false;
@@ -266,7 +258,9 @@ public class PassportCommand implements CommandExecutor {
                         var result = handlerFunction.execute(passport, new PlayerProxy(player));
                         if (result.isBoolean()) {
                             if (result.asBoolean()) {
-                                if (!setCommandBlockStrength(commandSender, 1)) {
+                                if (setCommandBlockStrength(plugin, commandSender, 1)) {
+                                    new PlayerTracker(plugin, (BlockCommandSender) commandSender, player);
+                                } else {
                                     commandSender.sendMessage(Component.text()
                                             .append(Component.text("Attestation succeeded for the passport held by " + player.getName()).color(TextColor.color(0, 200, 0))).appendNewline()
                                             .append(Component.text("Ruleset: ").decorate(TextDecoration.BOLD)).append(Component.text(rulesets.get(0).getName()))
@@ -287,7 +281,7 @@ public class PassportCommand implements CommandExecutor {
                     throw new AttestationException();
                 }
             } catch (AttestationException e) {
-                if (!setCommandBlockStrength(commandSender, 0)) {
+                if (!setCommandBlockStrength(plugin, commandSender, 0)) {
                     commandSender.sendMessage(Component.text()
                             .append(Component.text("Attestation failed for the passport held by " + player.getName()).color(TextColor.color(255, 0, 0))).appendNewline()
                             .append(Component.text("Ruleset: ").decorate(TextDecoration.BOLD)).append(Component.text(rulesets.get(0).getName()))

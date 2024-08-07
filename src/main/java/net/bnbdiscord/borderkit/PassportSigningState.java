@@ -40,7 +40,7 @@ public class PassportSigningState {
 
     private final Jurisdiction jurisdiction;
 
-    private Field[] fields = new Field[] {
+    private final Field[] fields = new Field[] {
             new Field("Given Names", "givenNames"),
             new Field("Family Names", "familyNames"),
             new Field("Expiry", "expiry", (value) -> {
