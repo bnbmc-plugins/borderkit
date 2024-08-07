@@ -16,7 +16,10 @@ public final class BorderKit extends JavaPlugin {
         // Plugin startup logic
         db = new DatabaseManager();
 
-        Objects.requireNonNull(getCommand("passport")).setExecutor(new PassportCommand(this, db));
+        var passportCommand = Objects.requireNonNull(getCommand("passport"));
+        var passportCode = new PassportCommand(this, db);
+        passportCommand.setExecutor(passportCode);
+//        passportCommand.setTabCompleter(passportCode);
     }
 
     @Override

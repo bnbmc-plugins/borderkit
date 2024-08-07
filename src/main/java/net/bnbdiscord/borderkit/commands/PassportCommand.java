@@ -17,10 +17,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.CommandBlock;
-import org.bukkit.command.BlockCommandSender;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
+import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.plugin.Plugin;
@@ -28,6 +25,7 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.PolyglotException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
@@ -35,7 +33,7 @@ import java.util.*;
 
 import static net.bnbdiscord.borderkit.Utils.setCommandBlockStrength;
 
-public class PassportCommand implements CommandExecutor {
+public class PassportCommand implements CommandExecutor, TabCompleter {
     private final Plugin plugin;
     private final NamespacedKey key;
     private final DatabaseManager db;
@@ -258,7 +256,7 @@ public class PassportCommand implements CommandExecutor {
                         var result = handlerFunction.execute(passport, new PlayerProxy(player));
                         if (result.isBoolean()) {
                             if (result.asBoolean()) {
-                                if (setCommandBlockStrength(plugin, commandSender, 1)) {
+                                if (setCommandBlockStrength(plugin, commandSender, 15)) {
                                     new PlayerTracker(plugin, (BlockCommandSender) commandSender, player);
                                 } else {
                                     commandSender.sendMessage(Component.text()
@@ -444,5 +442,39 @@ public class PassportCommand implements CommandExecutor {
         state.openMenu();
 
         return true;
+    }
+
+    @Override
+    public @Nullable List<String> onTabComplete(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NotNull String[] strings) {
+        if (strings.length == 0) {
+            return List.of();
+        }
+
+        try {
+            var listType = switch (strings[0]) {
+                case "sign" -> {
+                    yield "jurisdiction";
+                }
+//                case "signContinue" -> signContinue(commandSender, strings);
+//                case "nextPage" -> nextPage(commandSender, strings);
+//                case "prevPage" -> prevPage(commandSender, strings);
+//                case "query" -> query(commandSender, strings);
+//                case "attest" -> attest(commandSender, strings);
+//                case "jurisdiction" -> jurisdiction(commandSender, strings);
+//                case "ruleset" -> ruleset(commandSender, strings);
+                default -> {
+                    commandSender.sendMessage("Invalid Arguments");
+                    yield null;
+                }
+            };
+
+            return switch (listType) {
+//                case "sign" -> List.of("add", "update", "remove");
+                case "jurisdiction" -> db.getJurisdictionDao().queryForAll().stream().map(Jurisdiction::getCode).toList();
+                default -> List.of();
+            };
+        } catch (SQLException e) {
+            return List.of();
+        }
     }
 }
