@@ -8,8 +8,6 @@ import net.bnbdiscord.borderkit.database.DatabaseManager;
 import net.bnbdiscord.borderkit.database.Jurisdiction;
 import net.bnbdiscord.borderkit.database.Ruleset;
 import net.bnbdiscord.borderkit.exceptions.AttestationException;
-import net.bnbdiscord.borderkit.exceptions.PassportNotFoundException;
-import net.bnbdiscord.borderkit.exceptions.PassportSearchException;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.TextColor;
@@ -444,6 +442,10 @@ public class PassportCommand implements CommandExecutor {
         }
 
         var state = new PassportSigningState(plugin, player, item, jurisdiction.get(0));
+        if (state.biodataStartPage() == -1) {
+            commandSender.sendMessage("The template is invalid because the template requires three biodata pages, marked with the word \"BIODATA\" on each page.");
+            return false;
+        }
         signingStates.put(player.getUniqueId(), state);
         state.openMenu();
 

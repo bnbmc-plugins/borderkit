@@ -2,6 +2,7 @@ package net.bnbdiscord.borderkit;
 
 import net.bnbdiscord.borderkit.database.Jurisdiction;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextColor;
@@ -17,7 +18,9 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.function.Function;
 
 public class PassportSigningState {
@@ -219,5 +222,27 @@ public class PassportSigningState {
 
         book.setItemMeta(meta);
         player.openBook(book);
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public int biodataStartPage() {
+        var meta = (BookMeta) template.getItemMeta();
+
+        List<Integer> biodataPages = new ArrayList<>();
+        for (int i = 1; i <= meta.pages().size(); i++) {
+            if (((TextComponent)meta.page(i)).content().equals("BIODATA")) {
+                biodataPages.add(i);
+            }
+        }
+
+        for (int i = 0; i < biodataPages.size() - 2; i++) {
+            if (biodataPages.get(i + 1) - biodataPages.get(i) == 1 && biodataPages.get(i + 2) - biodataPages.get(i + 1) == 1) {
+                return biodataPages.get(i);
+            }
+        }
+        return -1;
     }
 }

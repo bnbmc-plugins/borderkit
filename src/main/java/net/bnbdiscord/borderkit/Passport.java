@@ -1,9 +1,8 @@
 package net.bnbdiscord.borderkit;
 
-import net.bnbdiscord.borderkit.exceptions.MultiplePassportsFoundException;
-import net.bnbdiscord.borderkit.exceptions.PassportNotFoundException;
-import net.bnbdiscord.borderkit.exceptions.PassportSearchException;
+import net.bnbdiscord.borderkit.exceptions.NoBiodataPageException;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Material;
@@ -35,6 +34,7 @@ public class Passport implements ProxyObject {
     private final NamespacedKey placeOfBirthKey;
     private final NamespacedKey expiryKey;
     private final NamespacedKey authorityKey;
+    private final NamespacedKey signerKey;
 
     public Passport(Plugin plugin, ItemStack book) {
         this.meta = (BookMeta) book.getItemMeta();
@@ -46,6 +46,7 @@ public class Passport implements ProxyObject {
         this.authorityKey = new NamespacedKey(plugin, "authority");
         this.dateOfBirthKey = new NamespacedKey(plugin, "dateOfBirth");
         this.placeOfBirthKey = new NamespacedKey(plugin, "placeOfBirth");
+        this.signerKey = new NamespacedKey(plugin, "signer");
     }
 
     public static void forPlayer(Plugin plugin, Player player, Consumer<Passport> callback) {
@@ -127,6 +128,8 @@ public class Passport implements ProxyObject {
     }
 
     public ItemStack signPassportTemplate(PassportSigningState state) {
+        int biodataStartPage = state.biodataStartPage();
+
         var random = new Random();
         var passportNumber = ((char) (random.nextInt(26) + 'A')) + "" + ((char) (random.nextInt(26) + 'A')) + String.format("%06d", random.nextInt(1000000));
 
@@ -148,7 +151,7 @@ public class Passport implements ProxyObject {
         var dateOfBirthString = dateOfBirth.format(formatter).toUpperCase();
 
         var issuingCountryCode = state.getJurisdiction().getCode();
-        var issuingCountryName = state.getJurisdiction().getName();
+        var issuingCountryName = state.getJurisdiction().getName().toUpperCase();
 
         var mrz1 = "P<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
         var mrz2 = "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
@@ -165,7 +168,7 @@ public class Passport implements ProxyObject {
         mrz2 = replaceFromIndex(mrz2, 42, "0");
         mrz2 = replaceFromIndex(mrz2, 43, calculateCheckDigit(mrz2, 0, 9, calculateCheckDigit(mrz2, 13, 19, calculateCheckDigit(mrz2, 21, 42, 0))) + "");
 
-        meta.page(2, Component.text()
+        meta.page(biodataStartPage, Component.text()
                 .append(Component.text("BIOMETRIC PAGE").color(TextColor.color(100, 100, 255))).appendNewline()
                 .appendNewline()
                 .append(Component.text("NAMES").color(TextColor.color(100, 100, 255))).appendNewline()
@@ -180,7 +183,7 @@ public class Passport implements ProxyObject {
                 .append(Component.text(mrz1.substring(0, 14))).appendNewline()
                 .append(Component.text(mrz2.substring(0, 14))).appendNewline()
                 .build());
-        meta.page(3, Component.text()
+        meta.page(biodataStartPage + 1, Component.text()
                 .append(Component.text("PLACE OF BIRTH").color(TextColor.color(100, 100, 255))).appendNewline()
                 .append(Component.text(placeOfBirth).hoverEvent(HoverEvent.showText(Component.text(placeOfBirth).appendNewline().append(Component.text(placeOfBirth2))))).appendNewline()
                 .append(Component.text(placeOfBirth2).hoverEvent(HoverEvent.showText(Component.text(placeOfBirth).appendNewline().append(Component.text(placeOfBirth2))))).appendNewline()
@@ -195,7 +198,7 @@ public class Passport implements ProxyObject {
                 .append(Component.text(mrz1.substring(14, 28))).appendNewline()
                 .append(Component.text(mrz2.substring(14, 28))).appendNewline()
                 .build());
-        meta.page(4, Component.text()
+        meta.page(biodataStartPage + 2, Component.text()
                 .append(Component.text("DATE OF ISSUE").color(TextColor.color(100, 100, 255))).appendNewline()
                 .append(Component.text(issueDateString).hoverEvent(HoverEvent.showText(Component.text(issueDateString)))).appendNewline()
                 .appendNewline()
@@ -219,6 +222,8 @@ public class Passport implements ProxyObject {
         meta.getPersistentDataContainer().set(placeOfBirthKey, PersistentDataType.STRING, (placeOfBirth + " " + placeOfBirth2).trim());
         meta.getPersistentDataContainer().set(expiryKey, PersistentDataType.LONG, expiryDate.toEpochSecond());
         meta.getPersistentDataContainer().set(dateOfBirthKey, PersistentDataType.LONG, dateOfBirth.toEpochSecond());
+        meta.getPersistentDataContainer().set(signerKey, PersistentDataType.STRING, state.getPlayer().getName());
+        meta.setTitle(meta.getTitle().replace("%g", givenNames).replace("%f", familyNames).replace("%i", issuingCountryCode));
 
         var newBook = new ItemStack(Material.WRITTEN_BOOK);
         newBook.setItemMeta(meta);
