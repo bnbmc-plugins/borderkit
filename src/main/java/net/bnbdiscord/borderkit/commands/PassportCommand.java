@@ -24,6 +24,8 @@ import org.bukkit.plugin.Plugin;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.PolyglotException;
+import org.graalvm.polyglot.Value;
+import org.graalvm.polyglot.proxy.ProxyExecutable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -219,6 +221,22 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
         return false;
     }
 
+    private interface RulesetEvaluationNextFunction {
+        public Optional<Boolean> runNextFunction();
+    }
+
+    private Value evaluateRuleset(String rulesetCode, Passport passport, Player player, RulesetEvaluationNextFunction nextFunction) {
+        try (var context = Context.newBuilder("js")
+                .allowHostAccess(HostAccess.newBuilder()
+                        .allowArrayAccess(true)
+                        .build())
+                .build()) {
+            context.eval("js", rulesetCode);
+            var handlerFunction = context.getBindings("js").getMember("handler");
+            return handlerFunction.execute(passport, new PlayerProxy(player), (ProxyExecutable) arguments -> nextFunction.runNextFunction().orElse(null));
+        }
+    }
+
     private boolean attest(CommandSender commandSender, String[] strings) throws SQLException {
         setCommandBlockStrength(plugin, commandSender, 0);
         if (strings.length != 4) {
@@ -234,7 +252,12 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
             return false;
         }
 
-        // TODO: global ruleset
+        var globalRuleset = db.getRulesetDao().queryForFieldValues(Map.of("jurisdiction_id", jurisdictionCode, "name", "global")).stream().findFirst();
+        var globalRulesetCode = globalRuleset.isPresent() ? globalRuleset.get().getCode() : """
+                function handler(passport, player, next) {
+                    if (passport?.isExpired) return false;
+                    return next()
+                }""";
 
         var playerName = strings[3];
         var player = plugin.getServer().getPlayer(playerName);
@@ -246,33 +269,29 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
         Passport.forPlayer(plugin, player, passport -> {
             try {
                 try {
-                    try (var context = Context.newBuilder("js")
-                            .allowHostAccess(HostAccess.newBuilder()
-                                    .allowArrayAccess(true)
-                                    .build())
-                            .build()) {
-                        context.eval("js", rulesets.get(0).getCode());
-                        var handlerFunction = context.getBindings("js").getMember("handler");
-                        var result = handlerFunction.execute(passport, new PlayerProxy(player));
-                        if (result.isBoolean()) {
-                            if (result.asBoolean()) {
-                                if (setCommandBlockStrength(plugin, commandSender, 15)) {
-                                    new PlayerTracker(plugin, (BlockCommandSender) commandSender, player);
-                                } else {
-                                    commandSender.sendMessage(Component.text()
-                                            .append(Component.text("Attestation succeeded for the passport held by " + player.getName()).color(TextColor.color(0, 200, 0))).appendNewline()
-                                            .append(Component.text("Ruleset: ").decorate(TextDecoration.BOLD)).append(Component.text(rulesets.get(0).getName()))
-                                    );
-                                }
+                    var result = evaluateRuleset(globalRulesetCode, passport, player, () -> {
+                        var innerResult = evaluateRuleset(rulesets.get(0).getCode(), passport, player, () -> Optional.of(true));
+                        if (!innerResult.isBoolean()) return Optional.empty();
+                        return Optional.of(innerResult.asBoolean());
+                    });
+                    if (result.isBoolean()) {
+                        if (result.asBoolean()) {
+                            if (setCommandBlockStrength(plugin, commandSender, 15)) {
+                                new PlayerTracker(plugin, (BlockCommandSender) commandSender, player);
                             } else {
-                                throw new AttestationException();
+                                commandSender.sendMessage(Component.text()
+                                        .append(Component.text("Attestation succeeded for the passport held by " + player.getName()).color(TextColor.color(0, 200, 0))).appendNewline()
+                                        .append(Component.text("Ruleset: ").decorate(TextDecoration.BOLD)).append(Component.text(rulesets.get(0).getName()))
+                                );
                             }
                         } else {
-                            commandSender.sendMessage("Return value was not a boolean");
-                            player.sendMessage(Component.text("BorderKit: There was a problem verifying your passport. Please visit a Border Force officer for manual processing.").color(TextColor.color(255, 0, 0)));
-
                             throw new AttestationException();
                         }
+                    } else {
+                        commandSender.sendMessage("Return value was not a boolean");
+                        player.sendMessage(Component.text("BorderKit: There was a problem verifying your passport. Please visit a Border Force officer for manual processing.").color(TextColor.color(255, 0, 0)));
+
+                        throw new AttestationException();
                     }
                 } catch (PolyglotException e) {
                     commandSender.sendMessage("An exception was thrown from the handler code. " + e.getMessage());
