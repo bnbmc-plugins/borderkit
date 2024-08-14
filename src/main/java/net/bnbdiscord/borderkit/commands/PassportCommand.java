@@ -452,7 +452,7 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
             return false;
         }
 
-        var state = new PassportSigningState(plugin, player, item, jurisdiction.get(0));
+        var state = new PassportSigningState(plugin, player, item, db, jurisdiction.get(0));
         if (state.biodataStartPage() == -1) {
             commandSender.sendMessage("The template is invalid because the template requires three biodata pages, marked with the word \"BIODATA\" on each page.");
             return false;
@@ -465,35 +465,36 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NotNull String[] strings) {
-        if (strings.length == 0) {
-            return List.of();
-        }
-
-        try {
-            var listType = switch (strings[0]) {
-                case "sign" -> {
-                    yield "jurisdiction";
-                }
-//                case "signContinue" -> signContinue(commandSender, strings);
-//                case "nextPage" -> nextPage(commandSender, strings);
-//                case "prevPage" -> prevPage(commandSender, strings);
-//                case "query" -> query(commandSender, strings);
-//                case "attest" -> attest(commandSender, strings);
-//                case "jurisdiction" -> jurisdiction(commandSender, strings);
-//                case "ruleset" -> ruleset(commandSender, strings);
-                default -> {
-                    commandSender.sendMessage("Invalid Arguments");
-                    yield null;
-                }
-            };
-
-            return switch (listType) {
-//                case "sign" -> List.of("add", "update", "remove");
-                case "jurisdiction" -> db.getJurisdictionDao().queryForAll().stream().map(Jurisdiction::getCode).toList();
-                default -> List.of();
-            };
-        } catch (SQLException e) {
-            return List.of();
-        }
+        return List.of();
+//        if (strings.length == 0) {
+//            return List.of();
+//        }
+//
+//        try {
+//            var listType = switch (strings[0]) {
+//                case "sign" -> {
+//                    yield "jurisdiction";
+//                }
+////                case "signContinue" -> signContinue(commandSender, strings);
+////                case "nextPage" -> nextPage(commandSender, strings);
+////                case "prevPage" -> prevPage(commandSender, strings);
+////                case "query" -> query(commandSender, strings);
+////                case "attest" -> attest(commandSender, strings);
+////                case "jurisdiction" -> jurisdiction(commandSender, strings);
+////                case "ruleset" -> ruleset(commandSender, strings);
+//                default -> {
+//                    commandSender.sendMessage("Invalid Arguments");
+//                    yield null;
+//                }
+//            };
+//
+//            return switch (listType) {
+////                case "sign" -> List.of("add", "update", "remove");
+//                case "jurisdiction" -> db.getJurisdictionDao().queryForAll().stream().map(Jurisdiction::getCode).toList();
+//                default -> List.of();
+//            };
+//        } catch (SQLException e) {
+//            return List.of();
+//        }
     }
 }

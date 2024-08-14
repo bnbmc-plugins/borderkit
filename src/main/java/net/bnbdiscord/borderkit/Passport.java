@@ -35,6 +35,8 @@ public class Passport implements ProxyObject {
     private final NamespacedKey expiryKey;
     private final NamespacedKey authorityKey;
     private final NamespacedKey signerKey;
+    private final NamespacedKey nationalityKey;
+    private final NamespacedKey versionKey;
 
     public Passport(Plugin plugin, ItemStack book) {
         this.meta = (BookMeta) book.getItemMeta();
@@ -44,8 +46,10 @@ public class Passport implements ProxyObject {
         this.passportNumberKey = new NamespacedKey(plugin, "passportNumber");
         this.expiryKey = new NamespacedKey(plugin, "expiry");
         this.authorityKey = new NamespacedKey(plugin, "authority");
+        this.nationalityKey = new NamespacedKey(plugin, "nationality");
         this.dateOfBirthKey = new NamespacedKey(plugin, "dateOfBirth");
         this.placeOfBirthKey = new NamespacedKey(plugin, "placeOfBirth");
+        this.versionKey = new NamespacedKey(plugin, "version");
         this.signerKey = new NamespacedKey(plugin, "signer");
     }
 
@@ -153,6 +157,9 @@ public class Passport implements ProxyObject {
         var issuingCountryCode = state.getJurisdiction().getCode();
         var issuingCountryName = state.getJurisdiction().getName().toUpperCase();
 
+        var nationalityCountryCode = state.getNationality().getCode();
+        var nationalityCountryName = state.getNationality().getName().toUpperCase();
+
         var mrz1 = "P<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
         var mrz2 = "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
 
@@ -169,29 +176,29 @@ public class Passport implements ProxyObject {
         mrz2 = replaceFromIndex(mrz2, 43, calculateCheckDigit(mrz2, 0, 9, calculateCheckDigit(mrz2, 13, 19, calculateCheckDigit(mrz2, 21, 42, 0))) + "");
 
         meta.page(biodataStartPage, Component.text()
-                .append(Component.text("BIOMETRIC PAGE").color(TextColor.color(100, 100, 255))).appendNewline()
+                .append(Component.text(state.getJurisdiction().getBiometricPageString()).color(TextColor.color(100, 100, 255))).appendNewline()
                 .appendNewline()
-                .append(Component.text("NAMES").color(TextColor.color(100, 100, 255))).appendNewline()
-                .append(Component.text("FAMILY").color(TextColor.color(200, 200, 200))).appendNewline()
+                .append(Component.text(state.getJurisdiction().getNamesString()).color(TextColor.color(100, 100, 255))).appendNewline()
+                .append(Component.text(state.getJurisdiction().getFamilyString()).color(TextColor.color(200, 200, 200))).appendNewline()
                 .append(Component.text(familyNames).hoverEvent(HoverEvent.showText(Component.text(familyNames)))).appendNewline()
-                .append(Component.text("GIVEN").color(TextColor.color(200, 200, 200))).appendNewline()
+                .append(Component.text(givenNames.isEmpty() ? "" : state.getJurisdiction().getGivenString()).color(TextColor.color(200, 200, 200))).appendNewline()
                 .append(Component.text(givenNames).hoverEvent(HoverEvent.showText(Component.text(givenNames)))).appendNewline()
                 .appendNewline()
-                .append(Component.text("DOCUMENT NUMBER").color(TextColor.color(100, 100, 255))).appendNewline()
+                .append(Component.text(state.getJurisdiction().getDocumentNumberString()).color(TextColor.color(100, 100, 255))).appendNewline()
                 .append(Component.text(passportNumber).hoverEvent(HoverEvent.showText(Component.text(passportNumber)))).appendNewline()
                 .appendNewline()
                 .append(Component.text(mrz1.substring(0, 14))).appendNewline()
                 .append(Component.text(mrz2.substring(0, 14))).appendNewline()
                 .build());
         meta.page(biodataStartPage + 1, Component.text()
-                .append(Component.text("PLACE OF BIRTH").color(TextColor.color(100, 100, 255))).appendNewline()
+                .append(Component.text(state.getJurisdiction().getPlaceOfBirthString()).color(TextColor.color(100, 100, 255))).appendNewline()
                 .append(Component.text(placeOfBirth).hoverEvent(HoverEvent.showText(Component.text(placeOfBirth).appendNewline().append(Component.text(placeOfBirth2))))).appendNewline()
                 .append(Component.text(placeOfBirth2).hoverEvent(HoverEvent.showText(Component.text(placeOfBirth).appendNewline().append(Component.text(placeOfBirth2))))).appendNewline()
                 .appendNewline()
-                .append(Component.text("DATE OF BIRTH").color(TextColor.color(100, 100, 255))).appendNewline()
+                .append(Component.text(state.getJurisdiction().getDateOfBirthString()).color(TextColor.color(100, 100, 255))).appendNewline()
                 .append(Component.text(dateOfBirthString).hoverEvent(HoverEvent.showText(Component.text(dateOfBirthString)))).appendNewline()
                 .appendNewline()
-                .append(Component.text("AUTHORITY / CODE").color(TextColor.color(100, 100, 255))).appendNewline()
+                .append(Component.text(state.getJurisdiction().getAuthorityCodeString()).color(TextColor.color(100, 100, 255))).appendNewline()
                 .append(Component.text(issuingCountryName).hoverEvent(HoverEvent.showText(Component.text(issuingCountryName)))).appendNewline()
                 .append(Component.text(issuingCountryCode).hoverEvent(HoverEvent.showText(Component.text(issuingCountryCode)))).appendNewline()
                 .appendNewline()
@@ -199,15 +206,15 @@ public class Passport implements ProxyObject {
                 .append(Component.text(mrz2.substring(14, 28))).appendNewline()
                 .build());
         meta.page(biodataStartPage + 2, Component.text()
-                .append(Component.text("DATE OF ISSUE").color(TextColor.color(100, 100, 255))).appendNewline()
+                .append(Component.text(state.getJurisdiction().getDateOfIssueString()).color(TextColor.color(100, 100, 255))).appendNewline()
                 .append(Component.text(issueDateString).hoverEvent(HoverEvent.showText(Component.text(issueDateString)))).appendNewline()
                 .appendNewline()
-                .append(Component.text("DATE OF EXPIRY").color(TextColor.color(100, 100, 255))).appendNewline()
+                .append(Component.text(state.getJurisdiction().getDateOfExpiryString()).color(TextColor.color(100, 100, 255))).appendNewline()
                 .append(Component.text(expiryDateString).hoverEvent(HoverEvent.showText(Component.text(expiryDateString)))).appendNewline()
                 .appendNewline()
-                .appendNewline()
-                .appendNewline()
-                .appendNewline()
+                .append(Component.text(state.getJurisdiction().getNationalityString()).color(TextColor.color(100, 100, 255))).appendNewline()
+                .append(Component.text(nationalityCountryName).hoverEvent(HoverEvent.showText(Component.text(nationalityCountryName)))).appendNewline()
+                .append(Component.text(nationalityCountryCode).hoverEvent(HoverEvent.showText(Component.text(nationalityCountryCode)))).appendNewline()
                 .appendNewline()
                 .appendNewline()
                 .append(Component.text(mrz1.substring(28, 44))).appendNewline()
@@ -219,10 +226,12 @@ public class Passport implements ProxyObject {
         meta.getPersistentDataContainer().set(holderGivenNameKey, PersistentDataType.STRING, givenNames);
         meta.getPersistentDataContainer().set(holderFamilyNameKey, PersistentDataType.STRING, familyNames);
         meta.getPersistentDataContainer().set(authorityKey, PersistentDataType.STRING, issuingCountryCode);
+        meta.getPersistentDataContainer().set(nationalityKey, PersistentDataType.STRING, nationalityCountryCode);
         meta.getPersistentDataContainer().set(placeOfBirthKey, PersistentDataType.STRING, (placeOfBirth + " " + placeOfBirth2).trim());
         meta.getPersistentDataContainer().set(expiryKey, PersistentDataType.LONG, expiryDate.toEpochSecond());
         meta.getPersistentDataContainer().set(dateOfBirthKey, PersistentDataType.LONG, dateOfBirth.toEpochSecond());
         meta.getPersistentDataContainer().set(signerKey, PersistentDataType.STRING, state.getPlayer().getName());
+        meta.getPersistentDataContainer().set(versionKey, PersistentDataType.INTEGER, 0);
         meta.setTitle(meta.getTitle().replace("%g", givenNames).replace("%f", familyNames).replace("%i", issuingCountryCode));
 
         var newBook = new ItemStack(Material.WRITTEN_BOOK);
@@ -262,11 +271,19 @@ public class Passport implements ProxyObject {
         return meta.getPersistentDataContainer().get(placeOfBirthKey, PersistentDataType.STRING);
     }
 
+    public String getNationality() {
+        return meta.getPersistentDataContainer().get(nationalityKey, PersistentDataType.STRING);
+    }
+
+    public int getVersion() {
+        return meta.getPersistentDataContainer().get(versionKey, PersistentDataType.INTEGER);
+    }
+
     public boolean isExpired() {
         return getExpiryDate().isBefore(ZonedDateTime.now());
     }
 
-    private static final Set<String> PROPERTIES = Set.of("givenName", "familyName", "issuingAuthority", "expiryDate", "dateOfBirth", "placeOfBirth", "isExpired");
+    private static final Set<String> PROPERTIES = Set.of("givenName", "familyName", "issuingAuthority", "expiryDate", "dateOfBirth", "placeOfBirth", "isExpired", "nationality");
 
     @Override
     public Object getMember(String key) {
@@ -277,6 +294,7 @@ public class Passport implements ProxyObject {
             case "expiryDate" ->  Date.from(getExpiryDate().toInstant());
             case "dateOfBirth" -> Date.from(getDateOfBirth().toInstant());
             case "placeOfBirth" -> getPlaceOfBirth();
+            case "nationality" -> getNationality();
             case "isExpired" -> isExpired();
             default -> throw new UnsupportedOperationException();
         };

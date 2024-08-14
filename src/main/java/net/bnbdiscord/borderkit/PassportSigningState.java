@@ -1,5 +1,6 @@
 package net.bnbdiscord.borderkit;
 
+import net.bnbdiscord.borderkit.database.DatabaseManager;
 import net.bnbdiscord.borderkit.database.Jurisdiction;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -13,6 +14,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.plugin.Plugin;
 
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -38,11 +40,12 @@ public class PassportSigningState {
         return jurisdiction;
     }
 
+    private DatabaseManager db;
     private final Jurisdiction jurisdiction;
 
     private final Field[] fields = new Field[] {
+            new Field("Family Names", "familyNames", (value) -> value.isEmpty() ? "Enter a name" : ""),
             new Field("Given Names", "givenNames"),
-            new Field("Family Names", "familyNames"),
             new Field("Expiry", "expiry", (value) -> {
                 var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -61,15 +64,29 @@ public class PassportSigningState {
                 var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
                 try {
-                    LocalDate.parse(value, formatter);
+                    var parsedDate = LocalDate.parse(value, formatter);
+                    if (parsedDate.isAfter(LocalDate.now())) {
+                        return "Date of birth must be before today";
+                    }
                 } catch (DateTimeParseException e) {
                     return "Enter a date in the form YYYY-MM-DD";
                 }
 
                 return "";
             }),
-            new Field("Place of Birth Line 1", "placeOfBirth"),
+            new Field("Place of Birth Line 1", "placeOfBirth", (value) -> value.isEmpty() ? "Enter the place of birth" : ""),
             new Field("Place of Birth Line 2", "placeOfBirth2"),
+            new Field("Nationality", "nationality", (value) -> {
+                try {
+                    if (db.getJurisdictionDao().queryForEq("code", value).isEmpty()) {
+                        return "Enter a valid jurisdiction code";
+                    }
+
+                    return "";
+                } catch (SQLException e) {
+                    return "SQL Error";
+                }
+            }),
     };
 
     public void flip(int i) {
@@ -133,14 +150,16 @@ public class PassportSigningState {
         }
     }
 
-    public PassportSigningState(Plugin plugin, Player player, ItemStack template, Jurisdiction jurisdiction) {
+    public PassportSigningState(Plugin plugin, Player player, ItemStack template, DatabaseManager db, Jurisdiction jurisdiction) {
         this.plugin = plugin;
         this.player = player;
         this.template = template;
+        this.db = db;
         this.jurisdiction = jurisdiction;
 
         var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         setFieldValue("expiry", ZonedDateTime.now(ZoneOffset.UTC).plusYears(10).format(formatter));
+        setFieldValue("nationality", jurisdiction.getCode());
     }
 
     public void setFieldValue(String field, String value) {
@@ -169,6 +188,15 @@ public class PassportSigningState {
         return "";
     }
 
+    public Jurisdiction getNationality() {
+        var nationality = fieldValue("nationality");
+        try {
+            return db.getJurisdictionDao().queryForEq("code", nationality).get(0);
+        } catch (SQLException e) {
+            return null;
+        }
+    }
+
     public void openMenu() {
         var book = new ItemStack(Material.WRITTEN_BOOK);
         var meta = (BookMeta) book.getItemMeta();
@@ -182,22 +210,31 @@ public class PassportSigningState {
 
         var errors = Arrays.stream(fields).map(Field::error).filter(error -> !error.isEmpty());
 
+        int visaPages = 0;
+        for (var i = 1; i <= ((BookMeta) template.getItemMeta()).getPageCount(); i++) {
+            if (isVisaPage(i)) visaPages++;
+        }
+
         meta.addPages(
                 (switch (page) {
                     case 0 -> heading.append(Component.text("Fill out each field to issue a new %s passport.".formatted(jurisdiction.getCode()))).appendNewline()
                             .appendNewline()
                             .append(Component.text("<!> WARNING:").decorate(TextDecoration.BOLD).color(TextColor.color(255, 0, 0))).append(Component.text(" Closing this book prematurely will cause you to lose all the information you have entered."));
-                    case 1 -> heading.append(fields[0].textComponent())
+                    case 1 -> heading.append(Component.text()
+                            .append(Component.text("VISA PAGES").color(TextColor.color(0, 0, 255)))).appendNewline()
+                            .append(Component.text(visaPages));
+                    case 2 -> heading.append(fields[0].textComponent())
                             .appendNewline()
                             .append(fields[1].textComponent())
                             .appendNewline()
                             .append(fields[2].textComponent());
-                    case 2 -> heading.append(fields[3].textComponent())
+                    case 3 -> heading.append(fields[3].textComponent())
                             .appendNewline()
                             .append(fields[4].textComponent())
                             .appendNewline()
                             .append(fields[5].textComponent());
-                    case 3 -> Component.text()
+                    case 4 -> heading.append(fields[6].textComponent());
+                    case 5 -> Component.text()
                             .append(Component.text("SIGN PASSPORT").decorate(TextDecoration.BOLD)).appendNewline()
                             .append(Component.text("Review the information that you have entered before you sign this passport. Once it has been signed, it cannot be edited.")).appendNewline()
                             .appendNewline()
@@ -212,7 +249,7 @@ public class PassportSigningState {
                         .appendNewline()
                         .append(page == 0 ? Component.text("[ <- ]").color(TextColor.color(150, 150, 150)) : Component.text("[ <- ]").color(TextColor.color(0, 0, 255)).clickEvent(ClickEvent.runCommand("/passport prevPage")).hoverEvent(HoverEvent.showText(Component.text("Previous Page"))))
                         .appendSpace()
-                        .append(page == 3 ? Component.text("[ -> ]").color(TextColor.color(150, 150, 150)) : Component.text("[ -> ]").color(TextColor.color(0, 0, 255)).clickEvent(ClickEvent.runCommand("/passport nextPage")).hoverEvent(HoverEvent.showText(Component.text("Next Page"))))
+                        .append(page == 5 ? Component.text("[ -> ]").color(TextColor.color(150, 150, 150)) : Component.text("[ -> ]").color(TextColor.color(0, 0, 255)).clickEvent(ClickEvent.runCommand("/passport nextPage")).hoverEvent(HoverEvent.showText(Component.text("Next Page"))))
                         .build()
         );
 
@@ -244,5 +281,14 @@ public class PassportSigningState {
             }
         }
         return -1;
+    }
+
+    public boolean isVisaPage(int pageNumber) {
+        var meta = (BookMeta) template.getItemMeta();
+
+        if (((TextComponent)meta.page(pageNumber)).content().equals("VISAS")) {
+            return true;
+        }
+        return false;
     }
 }
