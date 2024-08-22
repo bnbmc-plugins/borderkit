@@ -6,20 +6,23 @@ import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.vehicle.VehicleMoveEvent;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitTask;
 
 import static net.bnbdiscord.borderkit.Utils.setCommandBlockStrength;
 
-public class PlayerTracker implements Listener {
+public class PlayerTracker {
     private final Plugin plugin;
     private final BlockCommandSender commandBlock;
     private final Player player;
     private final Location initialLocation;
     private final int distance;
+    private final BukkitTask task;
 
     public PlayerTracker(Plugin plugin, BlockCommandSender commandBlock, Player player, int distance) {
         this.plugin = plugin;
@@ -28,7 +31,7 @@ public class PlayerTracker implements Listener {
         this.initialLocation = player.getLocation();
         this.distance = distance;
 
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        this.task = plugin.getServer().getScheduler().runTaskTimer(plugin, this::checkPlayer, 0, 1);
     }
 
     private boolean isOutsideRange(Location location) {
@@ -41,28 +44,12 @@ public class PlayerTracker implements Listener {
         return true;
     }
 
-    @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) {
-        if (event.getPlayer() != player) return;
-
+    private void checkPlayer() {
         if (!isOutsideRange(player.getLocation())) {
             return;
         }
 
         setCommandBlockStrength(plugin, commandBlock, 0);
-        HandlerList.unregisterAll(this);
-    }
-
-    @EventHandler
-    public void onVehicleMove(VehicleMoveEvent event) {
-        if (!player.isInsideVehicle()) return;
-        if (event.getVehicle() != player.getVehicle()) return;
-
-        if (!isOutsideRange(event.getVehicle().getLocation())) {
-            return;
-        }
-
-        setCommandBlockStrength(plugin, commandBlock, 0);
-        HandlerList.unregisterAll(this);
+        plugin.getServer().getScheduler().cancelTask(task.getTaskId());
     }
 }
