@@ -9,6 +9,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.vehicle.VehicleMoveEvent;
 import org.bukkit.plugin.Plugin;
 
 import static net.bnbdiscord.borderkit.Utils.setCommandBlockStrength;
@@ -30,17 +31,35 @@ public class PlayerTracker implements Listener {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
+    private boolean isOutsideRange(Location location) {
+        if (location.getWorld().equals(initialLocation.getWorld())) {
+            if (location.distance(initialLocation) < distance) {
+                // The player is too close to the command block
+                return false;
+            }
+        }
+        return true;
+    }
+
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
         if (event.getPlayer() != player) return;
 
-        var playerLocation = player.getLocation();
+        if (!isOutsideRange(player.getLocation())) {
+            return;
+        }
 
-        if (playerLocation.getWorld().equals(initialLocation.getWorld())) {
-            if (playerLocation.distance(initialLocation) < distance) {
-                // The player is too close to the command block
-                return;
-            }
+        setCommandBlockStrength(plugin, commandBlock, 0);
+        HandlerList.unregisterAll(this);
+    }
+
+    @EventHandler
+    public void onVehicleMove(VehicleMoveEvent event) {
+        if (!player.isInsideVehicle()) return;
+        if (event.getVehicle() != player.getVehicle()) return;
+
+        if (!isOutsideRange(event.getVehicle().getLocation())) {
+            return;
         }
 
         setCommandBlockStrength(plugin, commandBlock, 0);
