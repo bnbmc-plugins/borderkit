@@ -18,12 +18,14 @@ public class PlayerTracker implements Listener {
     private final BlockCommandSender commandBlock;
     private final Player player;
     private final Location initialLocation;
+    private final int distance;
 
-    public PlayerTracker(Plugin plugin, BlockCommandSender commandBlock, Player player) {
+    public PlayerTracker(Plugin plugin, BlockCommandSender commandBlock, Player player, int distance) {
         this.plugin = plugin;
         this.commandBlock = commandBlock;
         this.player = player;
         this.initialLocation = player.getLocation();
+        this.distance = distance;
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -35,7 +37,7 @@ public class PlayerTracker implements Listener {
         var playerLocation = player.getLocation();
 
         if (playerLocation.getWorld().equals(initialLocation.getWorld())) {
-            if (playerLocation.distance(initialLocation) < 3) {
+            if (playerLocation.distance(initialLocation) < distance) {
                 // The player is too close to the command block
                 return;
             }

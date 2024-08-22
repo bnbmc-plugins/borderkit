@@ -222,7 +222,7 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
     }
 
     private interface RulesetEvaluationNextFunction {
-        public Optional<Boolean> runNextFunction();
+        public Value runNextFunction();
     }
 
     private Value evaluateRuleset(String rulesetCode, Passport passport, Player player, RulesetEvaluationNextFunction nextFunction) {
@@ -233,7 +233,7 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
                 .build()) {
             context.eval("js", rulesetCode);
             var handlerFunction = context.getBindings("js").getMember("handler");
-            return handlerFunction.execute(passport, new PlayerProxy(player), (ProxyExecutable) arguments -> nextFunction.runNextFunction().orElse(null));
+            return handlerFunction.execute(passport, new PlayerProxy(player), (ProxyExecutable) arguments -> nextFunction.runNextFunction());
         }
     }
 
@@ -269,29 +269,31 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
         Passport.forPlayer(plugin, player, passport -> {
             try {
                 try {
-                    var result = evaluateRuleset(globalRulesetCode, passport, player, () -> {
-                        var innerResult = evaluateRuleset(rulesets.get(0).getCode(), passport, player, () -> Optional.of(true));
-                        if (!innerResult.isBoolean()) return Optional.empty();
-                        return Optional.of(innerResult.asBoolean());
-                    });
-                    if (result.isBoolean()) {
+                    var result = evaluateRuleset(globalRulesetCode, passport, player, () -> evaluateRuleset(rulesets.get(0).getCode(), passport, player, () -> Value.asValue(true)));
+
+                    int distance;
+                    if (result.isNumber()) {
+                        distance = result.asInt();
+                    } else if (result.isBoolean()) {
                         if (result.asBoolean()) {
-                            if (setCommandBlockStrength(plugin, commandSender, 15)) {
-                                new PlayerTracker(plugin, (BlockCommandSender) commandSender, player);
-                            } else {
-                                commandSender.sendMessage(Component.text()
-                                        .append(Component.text("Attestation succeeded for the passport held by " + player.getName()).color(TextColor.color(0, 200, 0))).appendNewline()
-                                        .append(Component.text("Ruleset: ").decorate(TextDecoration.BOLD)).append(Component.text(rulesets.get(0).getName()))
-                                );
-                            }
+                            distance = 3;
                         } else {
                             throw new AttestationException();
                         }
                     } else {
-                        commandSender.sendMessage("Return value was not a boolean");
+                        commandSender.sendMessage("Return value was not a boolean or number.");
                         player.sendMessage(Component.text("BorderKit: There was a problem verifying your passport. Please visit a Border Force officer for manual processing.").color(TextColor.color(255, 0, 0)));
 
                         throw new AttestationException();
+                    }
+
+                    if (setCommandBlockStrength(plugin, commandSender, 15)) {
+                        new PlayerTracker(plugin, (BlockCommandSender) commandSender, player, distance);
+                    } else {
+                        commandSender.sendMessage(Component.text()
+                                .append(Component.text("Attestation succeeded for the passport held by " + player.getName()).color(TextColor.color(0, 200, 0))).appendNewline()
+                                .append(Component.text("Ruleset: ").decorate(TextDecoration.BOLD)).append(Component.text(rulesets.get(0).getName()))
+                        );
                     }
                 } catch (PolyglotException e) {
                     commandSender.sendMessage("An exception was thrown from the handler code. " + e.getMessage());
