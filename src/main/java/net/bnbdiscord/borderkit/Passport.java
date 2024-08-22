@@ -233,6 +233,7 @@ public class Passport implements ProxyObject {
         meta.getPersistentDataContainer().set(signerKey, PersistentDataType.STRING, state.getPlayer().getName());
         meta.getPersistentDataContainer().set(versionKey, PersistentDataType.INTEGER, 0);
         meta.setTitle(meta.getTitle().replace("%g", givenNames).replace("%f", familyNames).replace("%i", issuingCountryCode));
+        meta.setAuthor(meta.getAuthor().replace("%g", givenNames).replace("%f", familyNames).replace("%i", issuingCountryCode));
 
         var newBook = new ItemStack(Material.WRITTEN_BOOK);
         newBook.setItemMeta(meta);
