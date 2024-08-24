@@ -61,6 +61,7 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
                 case "prevPage" -> prevPage(commandSender, strings);
                 case "query" -> query(commandSender, strings);
                 case "attest" -> attest(commandSender, strings);
+                case "dattest" -> dattest(commandSender, strings);
                 case "jurisdiction" -> jurisdiction(commandSender, strings);
                 case "ruleset" -> ruleset(commandSender, strings);
                 default -> {
@@ -219,6 +220,30 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
         return false;
     }
 
+    private void completePassportChecks(CommandSender commandSender, Player player, int distance) {
+        if (setCommandBlockStrength(plugin, commandSender, 15)) {
+            if (distance == 0) {
+                // Perform a one tick pulse
+                plugin.getServer().getScheduler().runTaskLater(plugin, () -> setCommandBlockStrength(plugin, commandSender, 0), 1L);
+            } else {
+                new PlayerTracker(plugin, (BlockCommandSender) commandSender, player, distance);
+            }
+        } else {
+            commandSender.sendMessage(Component.text()
+                    .append(Component.text("Attestation succeeded for the passport held by " + player.getName()).color(TextColor.color(0, 200, 0))).appendNewline()
+            );
+        }
+    }
+
+    private void failPassportChecks(CommandSender commandSender, Player player, AttestationException e) {
+        if (!setCommandBlockStrength(plugin, commandSender, 0)) {
+            commandSender.sendMessage(Component.text()
+                    .append(Component.text("Attestation failed for the passport held by " + player.getName()).color(TextColor.color(255, 0, 0))).appendNewline()
+                    .append(Component.text("Message: ").decorate(TextDecoration.BOLD)).append(Component.text(e.getMessage()))
+            );
+        }
+    }
+
     private boolean attest(CommandSender commandSender, String[] strings) throws SQLException {
         setCommandBlockStrength(plugin, commandSender, 0);
         if (strings.length != 4) {
@@ -242,23 +267,50 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
             Passport.forPlayer(plugin, player, passport -> {
                 try {
                     var distance = attestation.attest(passport, player);
-
-                    if (setCommandBlockStrength(plugin, commandSender, 15)) {
-                        new PlayerTracker(plugin, (BlockCommandSender) commandSender, player, distance);
-                    } else {
-                        commandSender.sendMessage(Component.text()
-                                .append(Component.text("Attestation succeeded for the passport held by " + player.getName()).color(TextColor.color(0, 200, 0))).appendNewline()
-                                .append(Component.text("Ruleset: ").decorate(TextDecoration.BOLD)).append(Component.text(rulesetName))
-                        );
-                    }
+                    completePassportChecks(commandSender, player, distance);
                 } catch (AttestationException e) {
-                    if (!setCommandBlockStrength(plugin, commandSender, 0)) {
-                        commandSender.sendMessage(Component.text()
-                                .append(Component.text("Attestation failed for the passport held by " + player.getName()).color(TextColor.color(255, 0, 0))).appendNewline()
-                                .append(Component.text("Ruleset: ").decorate(TextDecoration.BOLD)).append(Component.text(rulesetName)).appendNewline()
-                                .append(Component.text("Message: ").decorate(TextDecoration.BOLD)).append(Component.text(e.getMessage()))
-                        );
-                    }
+                    failPassportChecks(commandSender, player, e);
+                }
+            });
+        } catch (InvalidRulesetException e) {
+            commandSender.sendMessage("Invalid Ruleset");
+        }
+
+        return true;
+    }
+
+
+    private boolean dattest(CommandSender commandSender, String[] strings) throws SQLException {
+        setCommandBlockStrength(plugin, commandSender, 0);
+        if (strings.length != 6) {
+            commandSender.sendMessage("Invalid Arguments");
+            return false;
+        }
+
+        var jurisdictionCode = strings[1];
+        var rulesetName = strings[2];
+        var jurisdictionCode2 = strings[3];
+        var rulesetName2 = strings[4];
+
+        var playerName = strings[5];
+        var player = plugin.getServer().getPlayer(playerName);
+        if (player == null) {
+            commandSender.sendMessage("Invalid Player");
+            return false;
+        }
+
+        try {
+            var attestation = new Attestation(db, jurisdictionCode, rulesetName);
+            var attestation2 = new Attestation(db, jurisdictionCode2, rulesetName2);
+
+            Passport.forPlayer(plugin, player, passport -> {
+                try {
+                    attestation.attest(passport, player);
+                    var distance = attestation2.attest(passport, player);
+
+                    completePassportChecks(commandSender, player, distance);
+                } catch (AttestationException e) {
+                    failPassportChecks(commandSender, player, e);
                 }
             });
         } catch (InvalidRulesetException e) {
