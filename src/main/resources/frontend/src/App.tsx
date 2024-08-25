@@ -4,6 +4,7 @@ import {useState} from "react";
 import Styles from "./App.module.css"
 import {RulesetEditor} from "./RulesetEditor.tsx";
 import {useHotkeys} from "react-hotkeys-hook";
+import { useBeforeunload } from "react-beforeunload";
 
 function App() {
     const dataStore = useSavedDataStore();
@@ -14,6 +15,8 @@ function App() {
         enableOnFormTags: true,
         preventDefault: true
     });
+
+    useBeforeunload(Object.keys(dataStore.pendingSave).length ? e => e.preventDefault() : undefined);
 
   return (
     <div className={Styles.root}>
