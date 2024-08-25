@@ -1,0 +1,5 @@
+.root {
+    display: grid;
+    grid-template-areas: "sidebar editor";
+    grid-template-columns: 500px 1fr;
+}

@@ -1,0 +1,30 @@
+.sidebar {
+    grid-area: sidebar;
+    display: flex;
+    flex-direction: column;
+    cursor: default;
+}
+
+.item {
+    padding: 0 10px;
+    display: grid;
+    grid-template-columns: 1fr max-content max-content;
+    gap: 6px;
+}
+
+.saveButton {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.selectedItem {
+    background: rgba(100, 100, 255, 0.3);
+}
+
+.title {
+    padding: 10px;
+}
+
+.titleText {
+    font-size: 30px;
+}

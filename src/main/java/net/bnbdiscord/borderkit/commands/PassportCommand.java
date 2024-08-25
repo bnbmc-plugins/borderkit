@@ -1,29 +1,27 @@
 package net.bnbdiscord.borderkit.commands;
 
 import de.rapha149.signgui.SignGUI;
-import net.bnbdiscord.borderkit.*;
+import net.bnbdiscord.borderkit.Attestation;
+import net.bnbdiscord.borderkit.Passport;
+import net.bnbdiscord.borderkit.PassportSigningState;
+import net.bnbdiscord.borderkit.PlayerTracker;
 import net.bnbdiscord.borderkit.database.DatabaseManager;
 import net.bnbdiscord.borderkit.database.Jurisdiction;
 import net.bnbdiscord.borderkit.database.Ruleset;
 import net.bnbdiscord.borderkit.exceptions.AttestationException;
 import net.bnbdiscord.borderkit.exceptions.InvalidRulesetException;
+import net.bnbdiscord.borderkit.server.ServerRoot;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.block.CommandBlock;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.plugin.Plugin;
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.HostAccess;
-import org.graalvm.polyglot.PolyglotException;
-import org.graalvm.polyglot.Value;
-import org.graalvm.polyglot.proxy.ProxyExecutable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,13 +35,15 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
     private final Plugin plugin;
     private final NamespacedKey key;
     private final DatabaseManager db;
+    private final ServerRoot server;
 
     public Dictionary<UUID, PassportSigningState> signingStates = new Hashtable<>();
 
-    public PassportCommand(Plugin plugin, DatabaseManager db) {
+    public PassportCommand(Plugin plugin, DatabaseManager db, ServerRoot server) {
         this.plugin = plugin;
         this.key = new NamespacedKey(plugin, "key");
         this.db = db;
+        this.server = server;
     }
 
     @Override
@@ -154,6 +154,11 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
                 db.getRulesetDao().delete(rulesets.get(0));
                 commandSender.sendMessage("Removed " + rulesets.get(0).getName());
                 return true;
+            case "editor":
+                commandSender.sendMessage(Component.text("Click to edit " + jurisdiction.getName() + " rulesets")
+                        .color(TextColor.color(0, 200, 0))
+                        .decorate(TextDecoration.UNDERLINED)
+                        .clickEvent(ClickEvent.openUrl(server.rootUrl() + "?auth=" + server.tokenFor(commandSender, jurisdiction))));
         }
 
         return false;

@@ -16,6 +16,9 @@ repositories {
         name = "sonatype"
         url = "https://oss.sonatype.org/content/groups/public/"
     }
+    maven {
+        url 'https://jitpack.io'
+    }
 
     gradlePluginPortal()
 }
@@ -31,6 +34,8 @@ dependencies {
     implementation 'org.graalvm.js:js-scriptengine:22.3.0'
     implementation 'com.j256.ormlite:ormlite-jdbc:5.0'
     implementation 'org.xerial:sqlite-jdbc:3.41.2.2'
+    implementation 'com.github.masecla22:java-express:0.2.2'
+    implementation 'com.auth0:java-jwt:4.0.0'
 }
 
 def targetJavaVersion = 17

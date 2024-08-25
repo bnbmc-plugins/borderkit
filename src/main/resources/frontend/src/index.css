@@ -1,0 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Sofia+Sans+Condensed:ital,wght@0,1..1000;1,1..1000&display=swap');
+
+body {
+    margin: 0;
+    font-family: "Sofia Sans", sans-serif;
+
+    --background-color: rgb(40, 40, 40);
+    --foreground-color: white;
+
+    background: var(--background-color);
+    color: var(--foreground-color);
+}
