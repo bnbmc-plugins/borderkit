@@ -14,9 +14,6 @@ export function RulesetEditor({data, ruleset}: {
             startLineNumber: 1,
             endLineNumber: 7
         }])
-        editor.updateOptions({
-            lineNumbers: (lineNumber: number) => `${lineNumber - 7}`
-        })
 
         monaco?.languages.typescript.javascriptDefaults.addExtraLib(Types, "passportTypes.d.ts");
         monaco?.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
@@ -31,6 +28,41 @@ export function RulesetEditor({data, ruleset}: {
             alwaysStrict: true,
             strict: true
         });
+        monaco?.editor.defineTheme("contemporary", {
+            base: "vs-dark",
+            inherit: true,
+            rules: [
+                {
+                    token: "comment",
+                    foreground: "#7f7f7f",
+                }, {
+                    token: "keyword",
+                    foreground: "#ff9600"
+                }, {
+                    token: "variable",
+                    foreground: "#009600"
+                }, {
+                    token: "string",
+                    foreground: "#ff5959"
+                }, {
+                    token: "number",
+                    foreground: "#b08000"
+                }, {
+                    token: "comment.doc",
+                    foreground: "#607880"
+                }
+            ],
+            colors: {
+                "editor.foreground": "#ffffff",
+                "editor.background": "#282828",
+                "editor.lineHighlightBackground": "#3c3c3c"
+            },
+        });
+        editor.updateOptions({
+            lineNumbers: (lineNumber: number) => `${lineNumber - 7}`,
+            fontFamily: "JetBrains Mono",
+            theme: "contemporary"
+        })
 
         editor.focus();
     }
@@ -43,5 +75,5 @@ export function RulesetEditor({data, ruleset}: {
         });
     }
 
-    return <Editor height="100vh" defaultLanguage="javascript" defaultValue={`${handlerPreamble}${data.data[ruleset]?.code ?? ""}`} onChange={editorChange} onMount={onMount} />
+    return <Editor height="100vh" defaultLanguage="javascript" defaultValue={`${handlerPreamble}${data.data[ruleset]?.code ?? ""}`} theme={"contemporary"} onChange={editorChange} onMount={onMount} />
 }
