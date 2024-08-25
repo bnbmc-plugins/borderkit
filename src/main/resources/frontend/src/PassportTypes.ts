@@ -2,7 +2,7 @@ declare type HandlerReturn = boolean | number
 declare type PassportNextFunction = () => HandlerReturn;
 declare type HandlerFunction = (passport: Passport, player: Player, next?: PassportNextFunction) => HandlerReturn
 
-declare interface Passport {
+declare type Passport = {
     givenName: string
     familyName: string
     issuingAuthority: string
@@ -10,9 +10,11 @@ declare interface Passport {
     dateOfBirth: Date
     placeOfBirth: string
     isExpired: boolean
-}
+} | null;
 
-declare interface Player {
+// declare type Passport = null;
+
+declare type Player = {
     send: (message: string) => void
     sendError: (message: string) => void
 }

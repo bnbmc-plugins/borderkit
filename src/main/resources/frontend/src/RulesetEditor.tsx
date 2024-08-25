@@ -21,7 +21,20 @@ export function RulesetEditor({data, ruleset}: {
         })
 
         monaco?.languages.typescript.javascriptDefaults.addExtraLib(Types, "passportTypes.d.ts");
-        monaco?.languages.typescript.javascriptDefaults.addExtraLib(`declare const handler: HandlerFunction;`, "handler.d.ts");
+        monaco?.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+            ...monaco?.languages.typescript.javascriptDefaults.getDiagnosticsOptions(),
+            noSemanticValidation: false,
+            noSuggestionDiagnostics: false,
+            noSyntaxValidation: false
+        });
+        monaco?.languages.typescript.javascriptDefaults.setCompilerOptions({
+            ...monaco?.languages.typescript.javascriptDefaults.getCompilerOptions(),
+            checkJs: true,
+            alwaysStrict: true,
+            strict: true
+        });
+
+        editor.focus();
     }
 
     const editorChange = (value: string | undefined) => {
