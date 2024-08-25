@@ -8,5 +8,8 @@ export default defineConfig({
     proxy: {
       "/api": "http://localhost:21001"
     }
+  },
+  build: {
+    outDir: "../src/main/resources/frontend/dist"
   }
 })

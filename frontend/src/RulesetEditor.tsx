@@ -1,23 +1,21 @@
 import {Editor, useMonaco} from "@monaco-editor/react";
-import {useRef} from "react";
 import {SavedDataStore} from "./SavedDataStore.ts";
 import Types from "./PassportTypes.ts?raw";
 import {handlerPreamble} from "./templates.ts";
+import {editor} from "monaco-editor";
 
 export function RulesetEditor({data, ruleset}: {
     data: SavedDataStore
     ruleset: string
 }) {
-    const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>(null);
-
-    const onMount = (editor: monaco.editor.IStandaloneCodeEditor, monaco: ReturnType<typeof useMonaco>) => {
-        editorRef.current = editor;
+    const onMount = (editor: editor.IStandaloneCodeEditor, monaco: ReturnType<typeof useMonaco>) => {
+        // @ts-expect-error Not a public API
         editor.setHiddenAreas([{
             startLineNumber: 1,
             endLineNumber: 7
         }])
         editor.updateOptions({
-            lineNumbers: (lineNumber: number) => lineNumber - 7
+            lineNumbers: (lineNumber: number) => `${lineNumber - 7}`
         })
 
         monaco?.languages.typescript.javascriptDefaults.addExtraLib(Types, "passportTypes.d.ts");
