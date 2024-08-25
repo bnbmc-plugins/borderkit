@@ -12,9 +12,11 @@ import java.util.Set;
 
 public class PlayerProxy implements ProxyObject {
     private final Player player;
+    private final String jurisdiction;
 
-    public PlayerProxy(Player player) {
+    public PlayerProxy(Player player, String jurisdiction) {
         this.player = player;
+        this.jurisdiction = jurisdiction;
     }
 
     private static final Set<String> PROPERTIES = Set.of("sendError", "send");
@@ -23,11 +25,13 @@ public class PlayerProxy implements ProxyObject {
     public Object getMember(String key) {
         return switch (key) {
             case "sendError" -> (ProxyExecutable) arguments -> {
-                player.sendMessage(Component.text(arguments[0].asString()).color(TextColor.color(255, 0, 0)));
+                player.sendMessage(Component.text().append(Component.text(jurisdiction + "   ").color(TextColor.color(200, 200, 200)))
+                        .append(Component.text(arguments[0].asString()).color(TextColor.color(255, 0, 0))));
                 return null;
             };
             case "send" -> (ProxyExecutable) arguments -> {
-                player.sendMessage(Component.text(arguments[0].asString()).color(TextColor.color(0, 200, 0)));
+                player.sendMessage(Component.text().append(Component.text(jurisdiction + "   ").color(TextColor.color(200, 200, 200)))
+                        .append(Component.text(arguments[0].asString()).color(TextColor.color(0, 200, 0))));
                 return null;
             };
             default -> throw new UnsupportedOperationException();

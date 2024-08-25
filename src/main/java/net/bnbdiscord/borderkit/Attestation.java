@@ -20,10 +20,12 @@ import java.util.Map;
 import static net.bnbdiscord.borderkit.Utils.setCommandBlockStrength;
 
 public class Attestation {
+    private final String jurisdictionCode;
     String ruleset;
     String globalRuleset;
 
     public Attestation(DatabaseManager db, String jurisdictionCode, String ruleset) throws InvalidRulesetException, SQLException {
+        this.jurisdictionCode = jurisdictionCode;
         var rulesets = db.getRulesetDao().queryForFieldValues(Map.of("jurisdiction_id", jurisdictionCode, "name", ruleset));
         if (rulesets.isEmpty()) {
             throw new InvalidRulesetException();
@@ -50,7 +52,7 @@ public class Attestation {
                 .build()) {
             context.eval("js", rulesetCode);
             var handlerFunction = context.getBindings("js").getMember("handler");
-            return handlerFunction.execute(passport, new PlayerProxy(player), (ProxyExecutable) arguments -> nextFunction.runNextFunction());
+            return handlerFunction.execute(passport, new PlayerProxy(player, jurisdictionCode), (ProxyExecutable) arguments -> nextFunction.runNextFunction());
         }
     }
 
