@@ -28,3 +28,7 @@
 .titleText {
     font-size: 30px;
 }
+
+.globalRuleset {
+    color: rgb(0, 200, 0);
+}

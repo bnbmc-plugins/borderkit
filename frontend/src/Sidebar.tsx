@@ -12,6 +12,17 @@ export function Sidebar({data, currentRuleset, onCurrentRulesetChanged}: {
 }) {
     const {jurisdiction} = useAuth();
 
+    const compareRulesetNames = (a: string, b: string) => {
+        if (a === "global" && b !== "global") {
+            return -1; // a comes first
+        }
+        if (a !== "global" && b === "global") {
+            return 1; // b comes first
+        }
+
+        return a.localeCompare(b);
+    }
+
     const addNewRuleset = () => {
         const name = prompt("What are you calling the new ruleset?");
         if (name) {
@@ -29,8 +40,8 @@ export function Sidebar({data, currentRuleset, onCurrentRulesetChanged}: {
             <div>{jurisdiction}</div>
             <div className={Styles.titleText}>Rulesets</div>
         </div>
-        {Object.keys(data.data).sort((a: string, b: string) => a.localeCompare(b)).map(ruleset => <div key={ruleset}
-                                                    className={`${Styles.item} ${ruleset === currentRuleset && Styles.selectedItem}`}
+        {Object.keys(data.data).sort(compareRulesetNames).map(ruleset => <div key={ruleset}
+                                                    className={`${Styles.item} ${ruleset === currentRuleset && Styles.selectedItem} ${ruleset === "global" && Styles.globalRuleset}`}
                                                     onClick={() => onCurrentRulesetChanged(ruleset)}>
             <span>{ruleset}</span>
             {data.pendingSave[ruleset] && <span className={Styles.saveButton} onClick={() => data.revert(ruleset)}>Revert</span>}
