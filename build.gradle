@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'org.jetbrains.kotlin.jvm'
 }
 
 group = 'net.bnbdiscord'
@@ -26,6 +27,8 @@ repositories {
 dependencies {
     compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
 
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+
     implementation "de.rapha149.signgui:signgui:2.3.6"
     shadow "de.rapha149.signgui:signgui:2.3.6"
 
@@ -41,8 +44,6 @@ dependencies {
 def targetJavaVersion = 17
 java {
     def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    sourceCompatibility = javaVersion
-    targetCompatibility = javaVersion
     if (JavaVersion.current() < javaVersion) {
         toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
     }
@@ -63,4 +64,8 @@ processResources {
     filesMatching('plugin.yml') {
         expand props
     }
+}
+
+kotlin {
+    jvmToolchain(targetJavaVersion)
 }
