@@ -1,6 +1,7 @@
 package net.bnbdiscord.borderkit;
 
 import net.bnbdiscord.borderkit.commands.PassportCommand;
+import net.bnbdiscord.borderkit.commands.PassportCommandCompleter;
 import net.bnbdiscord.borderkit.database.DatabaseManager;
 import net.bnbdiscord.borderkit.server.ServerRoot;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -23,7 +24,8 @@ public final class BorderKit extends JavaPlugin {
         var passportCommand = Objects.requireNonNull(getCommand("passport"));
         var passportCode = new PassportCommand(this, db, server);
         passportCommand.setExecutor(passportCode);
-//        passportCommand.setTabCompleter(passportCode);
+        var passportCommandCompleter = new PassportCommandCompleter(this, db);
+        passportCommand.setTabCompleter(passportCommandCompleter);
 
     }
 

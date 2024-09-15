@@ -31,7 +31,7 @@ import java.util.*;
 
 import static net.bnbdiscord.borderkit.Utils.setCommandBlockStrength;
 
-public class PassportCommand implements CommandExecutor, TabCompleter {
+public class PassportCommand implements CommandExecutor {
     private final Plugin plugin;
     private final NamespacedKey key;
     private final DatabaseManager db;
@@ -477,40 +477,5 @@ public class PassportCommand implements CommandExecutor, TabCompleter {
         state.openMenu();
 
         return true;
-    }
-
-    @Override
-    public @Nullable List<String> onTabComplete(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NotNull String[] strings) {
-        return List.of();
-//        if (strings.length == 0) {
-//            return List.of();
-//        }
-//
-//        try {
-//            var listType = switch (strings[0]) {
-//                case "sign" -> {
-//                    yield "jurisdiction";
-//                }
-////                case "signContinue" -> signContinue(commandSender, strings);
-////                case "nextPage" -> nextPage(commandSender, strings);
-////                case "prevPage" -> prevPage(commandSender, strings);
-////                case "query" -> query(commandSender, strings);
-////                case "attest" -> attest(commandSender, strings);
-////                case "jurisdiction" -> jurisdiction(commandSender, strings);
-////                case "ruleset" -> ruleset(commandSender, strings);
-//                default -> {
-//                    commandSender.sendMessage("Invalid Arguments");
-//                    yield null;
-//                }
-//            };
-//
-//            return switch (listType) {
-////                case "sign" -> List.of("add", "update", "remove");
-//                case "jurisdiction" -> db.getJurisdictionDao().queryForAll().stream().map(Jurisdiction::getCode).toList();
-//                default -> List.of();
-//            };
-//        } catch (SQLException e) {
-//            return List.of();
-//        }
     }
 }
