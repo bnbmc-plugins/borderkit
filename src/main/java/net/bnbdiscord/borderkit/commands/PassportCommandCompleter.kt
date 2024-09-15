@@ -46,7 +46,7 @@ class PassportCommandCompleter(val plugin: Plugin, val db: DatabaseManager) : Ta
             // /passport jurisdiction ...
             "jurisdiction" -> when {
                 !sender.hasPermission("borderkit.jurisdiction") -> EMPTY
-                args.size == 2 -> listOf("add", "update", "remove")
+                args.size == 2 -> listOf("add", "update", "remove").filter { it.startsWith(args[1]) }
                 else -> when (args[1]) {
                     // /passport jurisdiction add <jurisdictionCode: anything> <name: anything>
                     "add" -> EMPTY
