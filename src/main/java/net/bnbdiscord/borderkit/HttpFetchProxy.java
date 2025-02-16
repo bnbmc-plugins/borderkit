@@ -1,6 +1,5 @@
 package net.bnbdiscord.borderkit;
 
-import com.google.gson.Gson;
 import net.bnbdiscord.borderkit.jsSupport.AsyncThenable;
 import org.bukkit.plugin.Plugin;
 import org.graalvm.polyglot.Value;
@@ -12,8 +11,6 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class HttpFetchProxy implements ProxyExecutable {
     private final Plugin plugin;
@@ -57,29 +54,8 @@ public class HttpFetchProxy implements ProxyExecutable {
                         var httpsConnection = (HttpsURLConnection) connection;
                     }
 
-                    var response = new HashMap<String, Object>();
-
-                    var responseCode = connection.getResponseCode();
-                    response.put("error", false);
-                    response.put("statusCode", responseCode);
-                    response.put("headers", connection.getHeaderFields());
-
-                    var stream = responseCode > 299 ? connection.getErrorStream() : connection.getInputStream();
-
-                    if (connection.getHeaderField("Content-Type").equals("application/json")) {
-                        var responseMessage = connection.getResponseMessage();
-                        var gson = new Gson();
-
-                        if (responseMessage.startsWith("[")) {
-                            response.put("body", gson.fromJson(responseMessage, List.class));
-                        } else if (responseMessage.startsWith("{")) {
-                            response.put("body", gson.fromJson(responseMessage, Map.class));
-                        }
-                    } else {
-                        response.put("body", connection.getResponseMessage());
-                    }
-
-                    return ProxyObject.fromMap(response);
+                    connection.getResponseCode();
+                    return new HttpResponseProxy(plugin, connection);
                 } catch (IOException e) {
                     var response = new HashMap<String, Object>();
                     response.put("error", true);

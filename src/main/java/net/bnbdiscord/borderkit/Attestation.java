@@ -11,7 +11,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
-import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.proxy.ProxyExecutable;
 
@@ -46,26 +45,30 @@ public class Attestation {
         public Object runNextFunction();
     }
 
-    private void evaluateRuleset(String rulesetCode, Passport passport, Player player, RulesetEvaluationNextFunction nextFunction, Consumer<Value> callback) {
-        var context = Context.newBuilder("js")
-                .allowHostAccess(HostAccess.newBuilder()
-                        .allowArrayAccess(true)
-                        .build())
-                .build();
-        context.getBindings("js").putMember("fetch", new HttpFetchProxy(plugin));
+    private void evaluateRuleset(String rulesetCode, Passport passport, Player player, RulesetEvaluationNextFunction nextFunction, Consumer<Value> callback, Consumer<Exception> onError) {
+        try {
+            var context = Context.newBuilder("js")
+                    .allowHostAccess(HostAccess.newBuilder()
+                            .allowArrayAccess(true)
+                            .build())
+                    .build();
+            context.getBindings("js").putMember("fetch", new HttpFetchProxy(plugin));
 
-        context.eval("js", rulesetCode);
-        var handlerFunction = context.getBindings("js").getMember("handler");
-        var handlerReturnValue = handlerFunction.execute(passport, new PlayerProxy(player, jurisdictionCode), (ProxyExecutable) arguments -> nextFunction.runNextFunction());
-        if (handlerReturnValue.hasMember("then")) {
-            handlerReturnValue.invokeMember("then", (ProxyExecutable) (retval) -> {
-                callback.accept(retval[0]);
+            context.eval("js", rulesetCode);
+            var handlerFunction = context.getBindings("js").getMember("handler");
+            var handlerReturnValue = handlerFunction.execute(passport, new PlayerProxy(player, jurisdictionCode), (ProxyExecutable) arguments -> nextFunction.runNextFunction());
+            if (handlerReturnValue.hasMember("then")) {
+                handlerReturnValue.invokeMember("then", (ProxyExecutable) (retval) -> {
+                    callback.accept(retval[0]);
+                    Bukkit.getScheduler().runTask(plugin, () -> context.close(true));
+                    return null;
+                });
+            } else {
+                callback.accept(handlerReturnValue);
                 Bukkit.getScheduler().runTask(plugin, () -> context.close(true));
-                return null;
-            });
-        } else {
-            callback.accept(handlerReturnValue);
-            Bukkit.getScheduler().runTask(plugin, () -> context.close(true));
+            }
+        } catch (Exception e) {
+            onError.accept(e);
         }
     }
 
@@ -74,7 +77,7 @@ public class Attestation {
             var nextFunction = new Thenable() {
                 @Override
                 protected void then(Value onResolve, Value onReject) {
-                    evaluateRuleset(ruleset, passport, player, () -> Value.asValue(true), onResolve::executeVoid);
+                    evaluateRuleset(ruleset, passport, player, () -> Value.asValue(true), onResolve::executeVoid, onReject::executeVoid);
                 }
             };
 
@@ -96,8 +99,8 @@ public class Attestation {
                 }
 
                 callback.accept(distance);
-            });
-        } catch (PolyglotException e) {
+            }, e -> onError.accept(new AttestationException("An exception was thrown from the handler code. " + e.getMessage())));
+        } catch (Exception e) {
             onError.accept(new AttestationException("An exception was thrown from the handler code. " + e.getMessage()));
         }
     }
