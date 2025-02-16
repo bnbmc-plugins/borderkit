@@ -1,5 +1,6 @@
 package net.bnbdiscord.borderkit;
 
+import com.oracle.truffle.js.runtime.JSContextOptions;
 import net.bnbdiscord.borderkit.database.DatabaseManager;
 import net.bnbdiscord.borderkit.exceptions.AttestationException;
 import net.bnbdiscord.borderkit.exceptions.InvalidRulesetException;
@@ -11,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
+import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.proxy.ProxyExecutable;
 
@@ -51,6 +53,8 @@ public class Attestation {
                     .allowHostAccess(HostAccess.newBuilder()
                             .allowArrayAccess(true)
                             .build())
+                    .allowExperimentalOptions(true)
+                    .option(JSContextOptions.UNHANDLED_REJECTIONS_NAME, "throw")
                     .build();
             context.getBindings("js").putMember("fetch", new HttpFetchProxy(plugin));
 
@@ -58,6 +62,16 @@ public class Attestation {
             var handlerFunction = context.getBindings("js").getMember("handler");
             var handlerReturnValue = handlerFunction.execute(passport, new PlayerProxy(player, jurisdictionCode), (ProxyExecutable) arguments -> nextFunction.runNextFunction());
             if (handlerReturnValue.hasMember("then")) {
+                handlerReturnValue.invokeMember("catch", (ProxyExecutable) (retval) -> {
+                    try {
+                        onError.accept(retval[0].throwException());
+                    } catch (PolyglotException e) {
+                        onError.accept(e);
+                    } finally {
+                        Bukkit.getScheduler().runTask(plugin, () -> context.close(true));
+                    }
+                    return null;
+                });
                 handlerReturnValue.invokeMember("then", (ProxyExecutable) (retval) -> {
                     callback.accept(retval[0]);
                     Bukkit.getScheduler().runTask(plugin, () -> context.close(true));

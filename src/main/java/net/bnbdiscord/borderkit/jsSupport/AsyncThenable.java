@@ -22,7 +22,7 @@ public abstract class AsyncThenable extends Thenable {
                 });
             } catch (Exception e) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    onReject.execute((Object) null);
+                    onReject.execute(e);
                 });
             }
         });
