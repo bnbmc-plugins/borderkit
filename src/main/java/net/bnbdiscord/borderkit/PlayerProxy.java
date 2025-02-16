@@ -7,7 +7,6 @@ import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.proxy.ProxyExecutable;
 import org.graalvm.polyglot.proxy.ProxyObject;
 
-import java.util.Date;
 import java.util.Set;
 
 public class PlayerProxy implements ProxyObject {

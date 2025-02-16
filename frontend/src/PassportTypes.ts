@@ -1,5 +1,6 @@
-declare type HandlerReturn = boolean | number
-declare type PassportNextFunction = () => HandlerReturn;
+declare type HandlerReturn = HandlerReturnRaw | Promise<HandlerReturnRaw>
+declare type HandlerReturnRaw = boolean | number
+declare type PassportNextFunction = () => Promise<HandlerReturnRaw>;
 declare type HandlerFunction = (passport: Passport, player: Player, next?: PassportNextFunction) => HandlerReturn
 
 declare type Passport = {

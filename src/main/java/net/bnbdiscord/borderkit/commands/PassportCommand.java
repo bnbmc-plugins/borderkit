@@ -23,7 +23,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
@@ -267,15 +266,10 @@ public class PassportCommand implements CommandExecutor {
         }
 
         try {
-            var attestation = new Attestation(db, jurisdictionCode, rulesetName);
+            var attestation = new Attestation(plugin, db, jurisdictionCode, rulesetName);
 
             Passport.forPlayer(plugin, player, passport -> {
-                try {
-                    var distance = attestation.attest(passport, player);
-                    completePassportChecks(commandSender, player, distance);
-                } catch (AttestationException e) {
-                    failPassportChecks(commandSender, player, e);
-                }
+                attestation.attest(passport, player, distance -> completePassportChecks(commandSender, player, distance), e -> failPassportChecks(commandSender, player, e));
             });
         } catch (InvalidRulesetException e) {
             commandSender.sendMessage("Invalid Ruleset");
@@ -305,19 +299,15 @@ public class PassportCommand implements CommandExecutor {
         }
 
         try {
-            var attestation = new Attestation(db, jurisdictionCode, rulesetName);
-            var attestation2 = new Attestation(db, jurisdictionCode2, rulesetName2);
+            var attestation = new Attestation(plugin, db, jurisdictionCode, rulesetName);
+            var attestation2 = new Attestation(plugin, db, jurisdictionCode2, rulesetName2);
 
-            Passport.forPlayer(plugin, player, passport -> {
-                try {
-                    attestation.attest(passport, player);
-                    var distance = attestation2.attest(passport, player);
-
-                    completePassportChecks(commandSender, player, distance);
-                } catch (AttestationException e) {
-                    failPassportChecks(commandSender, player, e);
-                }
-            });
+            Passport.forPlayer(plugin, player,
+                    passport -> attestation.attest(passport, player,
+                            (unused) -> attestation2.attest(passport, player,
+                                    distance -> completePassportChecks(commandSender, player, distance),
+                                    e -> failPassportChecks(commandSender, player, e)),
+                            e -> failPassportChecks(commandSender, player, e)));
         } catch (InvalidRulesetException e) {
             commandSender.sendMessage("Invalid Ruleset");
         }
