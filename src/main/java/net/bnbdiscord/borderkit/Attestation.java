@@ -37,9 +37,9 @@ public class Attestation {
 
         var globalRuleset = db.getRulesetDao().queryForFieldValues(Map.of("jurisdiction_id", jurisdictionCode, "name", "global")).stream().findFirst();
         this.globalRuleset = globalRuleset.isPresent() ? globalRuleset.get().getCode() : """
-                function handler(passport, player, next) {
+                async function handler(passport, player, next) {
                     if (passport?.isExpired) return false;
-                    return next()
+                    return await next()
                 }""";
     }
 
@@ -62,16 +62,18 @@ public class Attestation {
             var handlerFunction = context.getBindings("js").getMember("handler");
             var handlerReturnValue = handlerFunction.execute(passport, new PlayerProxy(player, jurisdictionCode), (ProxyExecutable) arguments -> nextFunction.runNextFunction());
             if (handlerReturnValue.hasMember("then")) {
-                handlerReturnValue.invokeMember("catch", (ProxyExecutable) (retval) -> {
-                    try {
-                        onError.accept(retval[0].throwException());
-                    } catch (PolyglotException e) {
-                        onError.accept(e);
-                    } finally {
-                        Bukkit.getScheduler().runTask(plugin, () -> context.close(true));
-                    }
-                    return null;
-                });
+                if (handlerReturnValue.hasMember("catch")) {
+                    handlerReturnValue.invokeMember("catch", (ProxyExecutable) (retval) -> {
+                        try {
+                            onError.accept(retval[0].throwException());
+                        } catch (PolyglotException e) {
+                            onError.accept(e);
+                        } finally {
+                            Bukkit.getScheduler().runTask(plugin, () -> context.close(true));
+                        }
+                        return null;
+                    });
+                }
                 handlerReturnValue.invokeMember("then", (ProxyExecutable) (retval) -> {
                     callback.accept(retval[0]);
                     Bukkit.getScheduler().runTask(plugin, () -> context.close(true));

@@ -1,9 +1,9 @@
-export const defaultGlobalFunction = `function handler(passport, player, next) {
+export const defaultGlobalFunction = `async function handler(passport, player, next) {
     if (passport?.isExpired) return false;
-    return next();
+    return await next();
 }`
 
-export const defaultHandlerTemplate = `function handler(passport, player) {
+export const defaultHandlerTemplate = `async function handler(passport, player) {
     // Handle checking of the passport
     return false;
 }`
