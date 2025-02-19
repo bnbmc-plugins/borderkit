@@ -1,4 +1,4 @@
-package net.bnbdiscord.borderkit.jsSupport;
+package net.bnbdiscord.borderkit.jsSupport.helpers;
 
 import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.proxy.ProxyExecutable;

@@ -1,7 +1,7 @@
-package net.bnbdiscord.borderkit;
+package net.bnbdiscord.borderkit.jsSupport;
 
 import com.google.gson.Gson;
-import net.bnbdiscord.borderkit.jsSupport.AsyncThenable;
+import net.bnbdiscord.borderkit.jsSupport.helpers.AsyncThenable;
 import org.bukkit.plugin.Plugin;
 import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.proxy.ProxyArray;

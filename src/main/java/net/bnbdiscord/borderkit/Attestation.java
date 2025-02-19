@@ -4,7 +4,11 @@ import com.oracle.truffle.js.runtime.JSContextOptions;
 import net.bnbdiscord.borderkit.database.DatabaseManager;
 import net.bnbdiscord.borderkit.exceptions.AttestationException;
 import net.bnbdiscord.borderkit.exceptions.InvalidRulesetException;
-import net.bnbdiscord.borderkit.jsSupport.Thenable;
+import net.bnbdiscord.borderkit.jsSupport.HttpFetchProxy;
+import net.bnbdiscord.borderkit.jsSupport.SubtleCryptoProxy;
+import net.bnbdiscord.borderkit.jsSupport.TextDecoderProxy;
+import net.bnbdiscord.borderkit.jsSupport.TextEncoderProxy;
+import net.bnbdiscord.borderkit.jsSupport.helpers.Thenable;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
@@ -15,6 +19,7 @@ import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.proxy.ProxyExecutable;
+import org.graalvm.polyglot.proxy.ProxyObject;
 
 import java.sql.SQLException;
 import java.util.Map;
@@ -52,11 +57,15 @@ public class Attestation {
             var context = Context.newBuilder("js")
                     .allowHostAccess(HostAccess.newBuilder()
                             .allowArrayAccess(true)
+                            .allowBufferAccess(true)
                             .build())
                     .allowExperimentalOptions(true)
                     .option(JSContextOptions.UNHANDLED_REJECTIONS_NAME, "throw")
                     .build();
             context.getBindings("js").putMember("fetch", new HttpFetchProxy(plugin));
+            context.getBindings("js").putMember("TextEncoder", new TextEncoderProxy());
+            context.getBindings("js").putMember("TextDecoder", new TextDecoderProxy());
+            context.getBindings("js").putMember("crypto", ProxyObject.fromMap(Map.of("subtle", new SubtleCryptoProxy())));
 
             context.eval("js", rulesetCode);
             var handlerFunction = context.getBindings("js").getMember("handler");

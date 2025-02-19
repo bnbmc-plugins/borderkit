@@ -1,4 +1,4 @@
-package net.bnbdiscord.borderkit.jsSupport;
+package net.bnbdiscord.borderkit.jsSupport.helpers;
 
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
