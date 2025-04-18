@@ -5,6 +5,7 @@ import org.graalvm.polyglot.proxy.ProxyExecutable;
 import org.graalvm.polyglot.proxy.ProxyInstantiable;
 import org.graalvm.polyglot.proxy.ProxyObject;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
@@ -26,7 +27,7 @@ class TextEncoderInstanceProxy implements ProxyObject {
                     return null;
                 }
 
-                return StandardCharsets.UTF_8.encode(arguments[0].asString());
+                return ByteBuffer.wrap(arguments[0].asString().getBytes(StandardCharsets.UTF_8));
             };
             case "encoding" -> "utf-8";
             default -> null;

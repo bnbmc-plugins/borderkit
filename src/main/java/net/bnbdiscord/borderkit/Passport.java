@@ -1,8 +1,6 @@
 package net.bnbdiscord.borderkit;
 
-import net.bnbdiscord.borderkit.exceptions.NoBiodataPageException;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Material;
@@ -12,7 +10,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
-import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.proxy.ProxyObject;
 
@@ -284,11 +281,12 @@ public class Passport implements ProxyObject {
         return getExpiryDate().isBefore(ZonedDateTime.now());
     }
 
-    private static final Set<String> PROPERTIES = Set.of("givenName", "familyName", "issuingAuthority", "expiryDate", "dateOfBirth", "placeOfBirth", "isExpired", "nationality");
+    private static final Set<String> PROPERTIES = Set.of("passportNumber", "givenName", "familyName", "issuingAuthority", "expiryDate", "dateOfBirth", "placeOfBirth", "isExpired", "nationality");
 
     @Override
     public Object getMember(String key) {
         return switch (key) {
+            case "passportNumber" -> getPassportNumber();
             case "givenName" -> getGivenName();
             case "familyName" -> getFamilyName();
             case "issuingAuthority" -> getIssuingAuthority();

@@ -61,7 +61,7 @@ public class HttpFetchProxy implements ProxyExecutable {
                         if (options.hasMember("body")) {
                             var body = options.getMember("body");
                             if (body.isString()) {
-                                output = StandardCharsets.UTF_8.encode(body.asString()).array();
+                                output = body.asString().getBytes(StandardCharsets.UTF_8);
                             } else if (body.hasBufferElements()) {
                                 output = body.as(ByteBuffer.class).array();
                             }

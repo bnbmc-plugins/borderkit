@@ -11,6 +11,7 @@ declare type Passport = {
     dateOfBirth: Date
     placeOfBirth: string
     isExpired: boolean
+    passportNumber: string
 } | null;
 
 // declare type Passport = null;
