@@ -346,6 +346,9 @@ public class PassportCommand implements CommandExecutor {
                 .append(Component.text("Expiry Date:").decorate(TextDecoration.BOLD)).appendSpace().append(
                         passport.isExpired() ? Component.text(passport.getExpiryDate().format(formatter) + " (Expired)").color(TextColor.color(255, 0, 0)) : Component.text(passport.getExpiryDate().format(formatter))
                 ).appendNewline()
+                .append(Component.text("Issue Date:").decorate(TextDecoration.BOLD)).appendSpace().append(
+                        passport.getIssueDate() == null ? Component.text("(Not Present - ePassport+ version too old)").color(TextColor.color(255, 0, 0)) : Component.text(passport.getIssueDate().format(formatter))
+                ).appendNewline()
                 .build()
         );
 

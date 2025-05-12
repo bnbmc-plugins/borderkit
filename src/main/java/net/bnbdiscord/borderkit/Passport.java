@@ -34,6 +34,7 @@ public class Passport implements ProxyObject {
     private final NamespacedKey signerKey;
     private final NamespacedKey nationalityKey;
     private final NamespacedKey versionKey;
+     private final NamespacedKey issueKey;
 
     public Passport(Plugin plugin, ItemStack book) {
         this.meta = (BookMeta) book.getItemMeta();
@@ -48,6 +49,7 @@ public class Passport implements ProxyObject {
         this.placeOfBirthKey = new NamespacedKey(plugin, "placeOfBirth");
         this.versionKey = new NamespacedKey(plugin, "version");
         this.signerKey = new NamespacedKey(plugin, "signer");
+        this.issueKey = new NamespacedKey(plugin, "issue");
     }
 
     public static void forPlayer(Plugin plugin, Player player, Consumer<Passport> callback) {
@@ -226,9 +228,10 @@ public class Passport implements ProxyObject {
         meta.getPersistentDataContainer().set(nationalityKey, PersistentDataType.STRING, nationalityCountryCode);
         meta.getPersistentDataContainer().set(placeOfBirthKey, PersistentDataType.STRING, (placeOfBirth + " " + placeOfBirth2).trim());
         meta.getPersistentDataContainer().set(expiryKey, PersistentDataType.LONG, expiryDate.toEpochSecond());
+        meta.getPersistentDataContainer().set(issueKey, PersistentDataType.LONG, issueDate.toEpochSecond());
         meta.getPersistentDataContainer().set(dateOfBirthKey, PersistentDataType.LONG, dateOfBirth.toEpochSecond());
         meta.getPersistentDataContainer().set(signerKey, PersistentDataType.STRING, state.getPlayer().getName());
-        meta.getPersistentDataContainer().set(versionKey, PersistentDataType.INTEGER, 0);
+        meta.getPersistentDataContainer().set(versionKey, PersistentDataType.INTEGER, 1);
         meta.setTitle(meta.getTitle().replace("%g", givenNames).replace("%f", familyNames).replace("%i", issuingCountryCode));
         meta.setAuthor(meta.getAuthor().replace("%g", givenNames).replace("%f", familyNames).replace("%i", issuingCountryCode));
 
@@ -261,6 +264,18 @@ public class Passport implements ProxyObject {
         return ZonedDateTime.ofInstant(Instant.ofEpochSecond(meta.getPersistentDataContainer().get(expiryKey, PersistentDataType.LONG)), ZoneOffset.UTC);
     }
 
+    public ZonedDateTime getIssueDate() {
+        if (getVersion() < 1) {
+            return null;
+        }
+
+        var issueDate = meta.getPersistentDataContainer().get(issueKey, PersistentDataType.LONG);
+        if (issueDate == null) {
+            return null;
+        }
+        return ZonedDateTime.ofInstant(Instant.ofEpochSecond(issueDate), ZoneOffset.UTC);
+    }
+
     public ZonedDateTime getDateOfBirth() {
         return ZonedDateTime.ofInstant(Instant.ofEpochSecond(meta.getPersistentDataContainer().get(dateOfBirthKey, PersistentDataType.LONG)), ZoneOffset.UTC);
     }
@@ -281,7 +296,7 @@ public class Passport implements ProxyObject {
         return getExpiryDate().isBefore(ZonedDateTime.now());
     }
 
-    private static final Set<String> PROPERTIES = Set.of("passportNumber", "givenName", "familyName", "issuingAuthority", "expiryDate", "dateOfBirth", "placeOfBirth", "isExpired", "nationality");
+    private static final Set<String> PROPERTIES = Set.of("passportNumber", "givenName", "familyName", "issuingAuthority", "expiryDate", "dateOfBirth", "placeOfBirth", "isExpired", "nationality", "issueDate");
 
     @Override
     public Object getMember(String key) {
@@ -295,6 +310,7 @@ public class Passport implements ProxyObject {
             case "placeOfBirth" -> getPlaceOfBirth();
             case "nationality" -> getNationality();
             case "isExpired" -> isExpired();
+            case "issueDate" -> getIssueDate();
             default -> throw new UnsupportedOperationException();
         };
     }

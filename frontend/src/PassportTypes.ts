@@ -8,6 +8,7 @@ declare type Passport = {
     familyName: string
     issuingAuthority: string
     expiryDate: Date
+    issueDate?: Date
     dateOfBirth: Date
     placeOfBirth: string
     isExpired: boolean
