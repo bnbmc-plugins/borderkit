@@ -13,7 +13,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.PolyglotException;
@@ -26,12 +25,12 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 public class Attestation {
-    private final Plugin plugin;
+    private final BorderKit plugin;
     private final String jurisdictionCode;
     String ruleset;
     String globalRuleset;
 
-    public Attestation(Plugin plugin, DatabaseManager db, String jurisdictionCode, String ruleset) throws InvalidRulesetException, SQLException {
+    public Attestation(BorderKit plugin, DatabaseManager db, String jurisdictionCode, String ruleset) throws InvalidRulesetException, SQLException {
         this.plugin = plugin;
         this.jurisdictionCode = jurisdictionCode;
         var rulesets = db.getRulesetDao().queryForFieldValues(Map.of("jurisdiction_id", jurisdictionCode, "name", ruleset));
@@ -98,6 +97,12 @@ public class Attestation {
     }
 
     public void attest(Passport passport, Player player, Consumer<Integer> callback, Consumer<AttestationException> onError) {
+        if (passport instanceof Passport.AttestationDisabledPassport adp) {
+            player.sendMessage(Component.text(adp.getReason()).color(TextColor.color(255, 0, 0)));
+            callback.accept(30);
+            return;
+        }
+
         try {
             var nextFunction = new Thenable() {
                 @Override

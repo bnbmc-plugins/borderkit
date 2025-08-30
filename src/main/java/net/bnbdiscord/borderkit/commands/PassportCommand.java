@@ -1,10 +1,7 @@
 package net.bnbdiscord.borderkit.commands;
 
 import de.rapha149.signgui.SignGUI;
-import net.bnbdiscord.borderkit.Attestation;
-import net.bnbdiscord.borderkit.Passport;
-import net.bnbdiscord.borderkit.PassportSigningState;
-import net.bnbdiscord.borderkit.PlayerTracker;
+import net.bnbdiscord.borderkit.*;
 import net.bnbdiscord.borderkit.database.DatabaseManager;
 import net.bnbdiscord.borderkit.database.Jurisdiction;
 import net.bnbdiscord.borderkit.database.Ruleset;
@@ -31,14 +28,14 @@ import java.util.*;
 import static net.bnbdiscord.borderkit.Utils.setCommandBlockStrength;
 
 public class PassportCommand implements CommandExecutor {
-    private final Plugin plugin;
+    private final BorderKit plugin;
     private final NamespacedKey key;
     private final DatabaseManager db;
     private final ServerRoot server;
 
     public Dictionary<UUID, PassportSigningState> signingStates = new Hashtable<>();
 
-    public PassportCommand(Plugin plugin, DatabaseManager db, ServerRoot server) {
+    public PassportCommand(BorderKit plugin, DatabaseManager db, ServerRoot server) {
         this.plugin = plugin;
         this.key = new NamespacedKey(plugin, "key");
         this.db = db;

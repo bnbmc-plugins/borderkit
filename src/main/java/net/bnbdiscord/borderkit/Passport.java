@@ -22,19 +22,36 @@ import java.util.*;
 import java.util.function.Consumer;
 
 public class Passport implements ProxyObject {
-    private final BookMeta meta;
-    private final NamespacedKey passportKey;
-    private final NamespacedKey holderGivenNameKey;
-    private final NamespacedKey holderFamilyNameKey;
-    private final NamespacedKey passportNumberKey;
-    private final NamespacedKey dateOfBirthKey;
-    private final NamespacedKey placeOfBirthKey;
-    private final NamespacedKey expiryKey;
-    private final NamespacedKey authorityKey;
-    private final NamespacedKey signerKey;
-    private final NamespacedKey nationalityKey;
-    private final NamespacedKey versionKey;
-     private final NamespacedKey issueKey;
+    private BookMeta meta = null;
+    private NamespacedKey passportKey = null;
+    private NamespacedKey holderGivenNameKey = null;
+    private NamespacedKey holderFamilyNameKey = null;
+    private NamespacedKey passportNumberKey = null;
+    private NamespacedKey dateOfBirthKey = null;
+    private NamespacedKey placeOfBirthKey = null;
+    private NamespacedKey expiryKey = null;
+    private NamespacedKey authorityKey = null;
+    private NamespacedKey signerKey = null;
+    private NamespacedKey nationalityKey = null;
+    private NamespacedKey versionKey = null;
+    private NamespacedKey issueKey = null;
+
+    public static class AttestationDisabledPassport extends Passport {
+        private final String reason;
+
+        public AttestationDisabledPassport(String reason) {
+            super();
+            this.reason = reason;
+        }
+
+        public String getReason() {
+            return reason;
+        }
+    }
+
+    private Passport() {
+
+    }
 
     public Passport(Plugin plugin, ItemStack book) {
         this.meta = (BookMeta) book.getItemMeta();
@@ -52,9 +69,15 @@ public class Passport implements ProxyObject {
         this.issueKey = new NamespacedKey(plugin, "issue");
     }
 
-    public static void forPlayer(Plugin plugin, Player player, Consumer<Passport> callback) {
-        List<ItemStack> passports = new ArrayList<>();
+    public static void forPlayer(BorderKit plugin, Player player, Consumer<Passport> callback) {
+        var attestationDisabled = plugin.isAttestationDisabledForPlayer(player);
+        if (attestationDisabled != null) {
+            // Avoid asking for a passport
+            callback.accept(new AttestationDisabledPassport(attestationDisabled));
+            return;
+        }
 
+        List<ItemStack> passports = new ArrayList<>();
         for (var itemStack : player.getEnderChest()) {
             if (isValidPassport(plugin, itemStack)) {
                 passports.add(itemStack);
