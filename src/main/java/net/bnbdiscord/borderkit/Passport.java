@@ -1,6 +1,8 @@
 package net.bnbdiscord.borderkit;
 
+import com.google.gson.*;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Material;
@@ -13,6 +15,7 @@ import org.bukkit.plugin.Plugin;
 import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.proxy.ProxyObject;
 
+import java.lang.reflect.Type;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -69,7 +72,7 @@ public class Passport implements ProxyObject {
         this.issueKey = new NamespacedKey(plugin, "issue");
     }
 
-    public static void forPlayer(BorderKit plugin, Player player, Consumer<Passport> callback) {
+    public static void forPlayer(BorderKit plugin, Player player, Consumer<Passport> callback, TextComponent message) {
         var attestationDisabled = plugin.isAttestationDisabledForPlayer(player);
         if (attestationDisabled != null) {
             // Avoid asking for a passport
@@ -92,10 +95,14 @@ public class Passport implements ProxyObject {
         if (passports.isEmpty()) {
             callback.accept(null);
         } else if (passports.size() > 1) {
-            PassportSelector.selectPassport(player, plugin, callback);
+            PassportSelector.selectPassport(player, plugin, message, callback);
         } else {
             callback.accept(new Passport(plugin, passports.get(0)));
         }
+    }
+
+    public static void forPlayer(BorderKit plugin, Player player, Consumer<Passport> callback) {
+        forPlayer(plugin, player, callback, Component.text("Choose a passport"));
     }
 
     public static boolean isValidPassport(Plugin plugin, ItemStack itemStack) {
@@ -333,7 +340,14 @@ public class Passport implements ProxyObject {
             case "placeOfBirth" -> getPlaceOfBirth();
             case "nationality" -> getNationality();
             case "isExpired" -> isExpired();
-            case "issueDate" -> getIssueDate();
+            case "issueDate" -> {
+                var issueDate = getIssueDate();
+                if (issueDate == null) {
+                    yield null;
+                } else {
+                    yield Date.from(issueDate.toInstant());
+                }
+            }
             default -> throw new UnsupportedOperationException();
         };
     }
@@ -353,4 +367,32 @@ public class Passport implements ProxyObject {
         // Not allowed
         throw new UnsupportedOperationException();
     }
+
+    public static class GsonSerializer implements JsonSerializer<Passport> {
+        @Override
+        public JsonElement serialize(Passport src, Type typeOfSrc, JsonSerializationContext context) {
+            var obj = new JsonObject();
+
+            for (var keyObj : (Object[]) src.getMemberKeys()) {
+                var key = (String) keyObj;
+                var value = src.getMember(key);
+
+                if (value == null) {
+                    obj.add(key, JsonNull.INSTANCE);
+                    continue;
+                }
+
+                if (value instanceof ZonedDateTime zdt) {
+                    obj.add(key, context.serialize(Date.from(zdt.toInstant()), Date.class));
+                } else if (value instanceof Date d) {
+                    obj.add(key, context.serialize(d, Date.class));
+                } else {
+                    obj.add(key, context.serialize(value));
+                }
+            }
+
+            return obj;
+        }
+    }
+
 }

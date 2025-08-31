@@ -1,6 +1,6 @@
 package net.bnbdiscord.borderkit;
 
-import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -12,7 +12,6 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 public class PassportSelector implements Listener {
@@ -22,12 +21,12 @@ public class PassportSelector implements Listener {
     private final Consumer<Passport> callback;
     private boolean accepted = false;
 
-    private PassportSelector(Player player, Plugin plugin, Consumer<Passport> callback) {
+    private PassportSelector(Player player, Plugin plugin, Consumer<Passport> callback, TextComponent message) {
         this.player = player;
         this.plugin = plugin;
         this.callback = callback;
 
-        inv = Bukkit.createInventory(null, player.getEnderChest().getSize(), Component.text("Choose a passport"));
+        inv = Bukkit.createInventory(null, player.getEnderChest().getSize(), message);
         for (int i = 0; i < player.getEnderChest().getSize(); i++) {
             var item = player.getEnderChest().getItem(i);
             if (item == null) continue;
@@ -37,8 +36,8 @@ public class PassportSelector implements Listener {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
-    public static void selectPassport(Player player, Plugin plugin, Consumer<Passport> callback) {
-        var selector = new PassportSelector(player, plugin, callback);
+    public static void selectPassport(Player player, Plugin plugin, TextComponent message, Consumer<Passport> callback) {
+        var selector = new PassportSelector(player, plugin, callback, message);
         player.openInventory(selector.inv);
     }
 

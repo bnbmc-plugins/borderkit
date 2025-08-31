@@ -1,6 +1,7 @@
 package net.bnbdiscord.borderkit.commands
 
 import net.bnbdiscord.borderkit.database.DatabaseManager
+import net.bnbdiscord.borderkit.server.ServerRoot
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.command.TabCompleter
@@ -9,7 +10,7 @@ import org.bukkit.plugin.Plugin
 // Return instead of null for no autocompletion. Returning null autocompletes to the player's username, not nothing.
 val EMPTY = listOf<String>()
 
-class PassportCommandCompleter(val plugin: Plugin, val db: DatabaseManager) : TabCompleter {
+class PassportCommandCompleter(val plugin: Plugin, val db: DatabaseManager, val server: ServerRoot) : TabCompleter {
     override fun onTabComplete(
         sender: CommandSender,
         command: Command,
@@ -19,7 +20,7 @@ class PassportCommandCompleter(val plugin: Plugin, val db: DatabaseManager) : Ta
         if (args.isEmpty()) return EMPTY
 
         if (args.size == 1) {
-            val result = mutableListOf("attest", "dattest", "query", "ruleset", "sign")
+            val result = mutableListOf("attest", "dattest", "query", "ruleset", "sign", "beam")
             if (sender.hasPermission("borderkit.jurisdiction"))
                 result.add("jurisdiction")
 
@@ -86,6 +87,11 @@ class PassportCommandCompleter(val plugin: Plugin, val db: DatabaseManager) : Ta
                 2 -> jurisdictionCodeWithPermission(args[1], "borderkit.passport.sign.", sender)
                 else -> EMPTY
             }
+            // /passport beam <beamCode>
+            "beam" -> when (args.size) {
+                2 -> activeBeamCode()
+                else -> EMPTY
+            }
             else -> EMPTY
         }
     }
@@ -122,4 +128,6 @@ class PassportCommandCompleter(val plugin: Plugin, val db: DatabaseManager) : Ta
         result.addAll(plugin.server.onlinePlayers.map { it.name })
         return result.filter { it.lowercase().startsWith(arg.lowercase()) }
     }
+
+    private fun activeBeamCode(): List<String> = server.activeBeamCodes().toList()
 }

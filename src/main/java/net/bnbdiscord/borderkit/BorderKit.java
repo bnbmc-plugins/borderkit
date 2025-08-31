@@ -27,7 +27,7 @@ public final class BorderKit extends JavaPlugin {
         var passportCommand = Objects.requireNonNull(getCommand("passport"));
         var passportCode = new PassportCommand(this, db, server);
         passportCommand.setExecutor(passportCode);
-        var passportCommandCompleter = new PassportCommandCompleter(this, db);
+        var passportCommandCompleter = new PassportCommandCompleter(this, db, server);
         passportCommand.setTabCompleter(passportCommandCompleter);
 
     }

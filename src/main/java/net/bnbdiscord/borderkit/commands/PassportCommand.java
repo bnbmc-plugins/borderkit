@@ -15,10 +15,13 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.command.*;
+import org.bukkit.Sound;
+import org.bukkit.command.BlockCommandSender;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.BookMeta;
-import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.SQLException;
@@ -60,6 +63,7 @@ public class PassportCommand implements CommandExecutor {
                 case "dattest" -> dattest(commandSender, strings);
                 case "jurisdiction" -> jurisdiction(commandSender, strings);
                 case "ruleset" -> ruleset(commandSender, strings);
+                case "beam" -> beam(commandSender, strings);
                 default -> {
                     commandSender.sendMessage("Invalid Arguments");
                     yield true;
@@ -468,4 +472,35 @@ public class PassportCommand implements CommandExecutor {
 
         return true;
     }
+
+    private boolean beam(CommandSender commandSender, String[] strings) throws SQLException {
+        if (strings.length != 2) {
+            commandSender.sendMessage("Invalid Arguments");
+            return false;
+        }
+
+        var beamCode = strings[1];
+        var prebeam = server.getPreBeamData(beamCode);
+        if (prebeam == null) {
+            commandSender.sendMessage("Invalid beam code");
+            return false;
+        }
+
+        if (commandSender instanceof Player player) {
+            Passport.forPlayer(plugin, player, passport -> {
+                if (server.completeBeam(beamCode, passport, player)) {
+                    commandSender.sendMessage(Component.text("Beam complete. Continue on " + prebeam.serviceName + ".").color(TextColor.color(0, 200, 0)));
+                    player.playSound(player.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_BLAST, 1.0f, 1.0f);
+                } else {
+                    commandSender.sendMessage(Component.text("Unable to beam. Return to " + prebeam.serviceName + " and try again.").color(TextColor.color(255, 0, 0)));
+                }
+
+            }, Component.text("Beam to " + prebeam.serviceName + "?"));
+        } else {
+            commandSender.sendMessage("This command can only be run by a player");
+        }
+
+        return true;
+    }
+
 }
